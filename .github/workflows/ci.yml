@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
@@ -116,29 +118,18 @@ jobs:
       - run: npm run pack:check
 
       - name: Example startup smokes
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           mkdir -p .cache
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/basic-window-smoke.ts
-            xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/basic-input-smoke.ts
-            xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/image-loading-smoke.ts
-            xvfb-run -a "$GOCCIA_LOADER" examples/smoke.ts
-            xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/doom-smoke.ts
-          else
-            "$GOCCIA_LOADER" tests/fixtures/basic-window-smoke.ts
-            "$GOCCIA_LOADER" tests/fixtures/basic-input-smoke.ts
-            "$GOCCIA_LOADER" tests/fixtures/image-loading-smoke.ts
-            "$GOCCIA_LOADER" examples/smoke.ts
-            "$GOCCIA_LOADER" tests/fixtures/doom-smoke.ts
-          fi
+          xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/basic-window-smoke.ts
+          xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/basic-input-smoke.ts
+          xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/image-loading-smoke.ts
+          xvfb-run -a "$GOCCIA_LOADER" examples/smoke.ts
+          xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/doom-smoke.ts
           test -s .cache/doom-smoke.png
 
       - name: Goccia-executed DOOM GPL smoke
+        if: runner.os == 'Linux'
         shell: bash
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            xvfb-run -a make -C examples/doom-gpl smoke
-          else
-            make -C examples/doom-gpl smoke
-          fi
+        run: xvfb-run -a make -C examples/doom-gpl smoke
