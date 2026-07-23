@@ -1,0 +1,13 @@
+{
+  "engine": {
+    "repository": "https://github.com/curioustorvald/tsvm-doom.git",
+    "commit": "ed6b4b2d44314d947fd0d878554d4c029e5617e3",
+    "tree": "d053c491e65abfa0c6c8e1c010fd7bfa14210b59",
+    "license": "GPL-2.0-only"
+  },
+  "freedoom": {
+    "version": "0.13.0",
+    "url": "https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip",
+    "sha256": "3f9b264f3e3ce503b4fb7f6bdcb1f419d93c7b546f4df3e874dd878db9688f59"
+  }
+}

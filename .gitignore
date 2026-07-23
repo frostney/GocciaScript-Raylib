@@ -1,0 +1,8 @@
+.cache/
+dist/
+node_modules/
+*.tgz
+.DS_Store
+libraylib.dylib
+libraylib.so
+raylib.dll

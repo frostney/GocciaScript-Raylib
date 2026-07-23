@@ -1,0 +1,5 @@
+{
+  "source-type": "module",
+  "mode": "bytecode",
+  "unsafe-ffi": true
+}

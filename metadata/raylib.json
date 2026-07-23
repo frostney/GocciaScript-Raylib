@@ -1,0 +1,21 @@
+{
+  "version": "6.0",
+  "commit": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",
+  "repository": "https://github.com/raysan5/raylib",
+  "api": {
+    "path": "tools/rlparser/output/raylib_api.json",
+    "blob": "06abbb7f74d1817217b21454ce463ba1b2f1e612",
+    "sha256": "d4e2dd0727a8edf4d4f828e23f86e3bb74e373861edd0eabef4a634ae74936d6"
+  },
+  "bunny": {
+    "path": "examples/textures/resources/raybunny.png",
+    "blob": "b608147bcb6b1a3d8413739d52106eea2ecd565a",
+    "sha256": "d3e0850e9cae2210a6d3aa7c3f6024907ba79ee1d4ba4ab841666810cf7c2238"
+  },
+  "expectedInventory": {
+    "functions": 600,
+    "structs": 35,
+    "aliases": 6,
+    "callbacks": 6
+  }
+}

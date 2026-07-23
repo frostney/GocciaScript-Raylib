@@ -1,0 +1,10 @@
+{
+  "version": "0.10.0",
+  "commit": "c477011ed305be05b371ff5f54ad0b54de9ac0cc",
+  "tagObject": "776d31393b625ef24c190c9b7d5fba5bad100a8f",
+  "release": "https://github.com/frostney/GocciaScript/releases/tag/0.10.0",
+  "ffi": {
+    "maxArguments": 8,
+    "mixedTopLevelF32": false
+  }
+}
