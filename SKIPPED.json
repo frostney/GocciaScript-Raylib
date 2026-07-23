@@ -1,0 +1,684 @@
+{
+  "schemaVersion": 1,
+  "raylibVersion": "6.0",
+  "raylibCommit": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",
+  "gocciaScriptVersion": "0.10.0",
+  "apiFunctions": 600,
+  "callableTargetAfterUpstreamSupport": 597,
+  "generatedFunctions": 488,
+  "skippedFunctions": 112,
+  "skipped": [
+    {
+      "name": "TraceLog",
+      "reason": "varargs",
+      "category": "intentional-0.1-scope",
+      "signature": "void TraceLog(int, const char *, ...)"
+    },
+    {
+      "name": "SetGamepadVibration",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SetGamepadVibration(int, float, float, float)"
+    },
+    {
+      "name": "UpdateCameraPro",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void UpdateCameraPro(Camera *, Vector3, Vector3, float)"
+    },
+    {
+      "name": "DrawLineEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawLineEx(Vector2, Vector2, float, Color)"
+    },
+    {
+      "name": "DrawLineBezier",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawLineBezier(Vector2, Vector2, float, Color)"
+    },
+    {
+      "name": "DrawCircle",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCircle(int, int, float, Color)"
+    },
+    {
+      "name": "DrawCircleV",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCircleV(Vector2, float, Color)"
+    },
+    {
+      "name": "DrawCircleGradient",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCircleGradient(Vector2, float, Color, Color)"
+    },
+    {
+      "name": "DrawCircleSector",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCircleSector(Vector2, float, float, float, int, Color)"
+    },
+    {
+      "name": "DrawCircleSectorLines",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCircleSectorLines(Vector2, float, float, float, int, Color)"
+    },
+    {
+      "name": "DrawCircleLines",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCircleLines(int, int, float, Color)"
+    },
+    {
+      "name": "DrawCircleLinesV",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCircleLinesV(Vector2, float, Color)"
+    },
+    {
+      "name": "DrawEllipse",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawEllipse(int, int, float, float, Color)"
+    },
+    {
+      "name": "DrawEllipseV",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawEllipseV(Vector2, float, float, Color)"
+    },
+    {
+      "name": "DrawEllipseLines",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawEllipseLines(int, int, float, float, Color)"
+    },
+    {
+      "name": "DrawEllipseLinesV",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawEllipseLinesV(Vector2, float, float, Color)"
+    },
+    {
+      "name": "DrawRing",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawRing(Vector2, float, float, float, float, int, Color)"
+    },
+    {
+      "name": "DrawRingLines",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawRingLines(Vector2, float, float, float, float, int, Color)"
+    },
+    {
+      "name": "DrawRectanglePro",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawRectanglePro(Rectangle, Vector2, float, Color)"
+    },
+    {
+      "name": "DrawRectangleLinesEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawRectangleLinesEx(Rectangle, float, Color)"
+    },
+    {
+      "name": "DrawRectangleRounded",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawRectangleRounded(Rectangle, float, int, Color)"
+    },
+    {
+      "name": "DrawRectangleRoundedLines",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawRectangleRoundedLines(Rectangle, float, int, Color)"
+    },
+    {
+      "name": "DrawRectangleRoundedLinesEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawRectangleRoundedLinesEx(Rectangle, float, int, float, Color)"
+    },
+    {
+      "name": "DrawPoly",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawPoly(Vector2, int, float, float, Color)"
+    },
+    {
+      "name": "DrawPolyLines",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawPolyLines(Vector2, int, float, float, Color)"
+    },
+    {
+      "name": "DrawPolyLinesEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawPolyLinesEx(Vector2, int, float, float, float, Color)"
+    },
+    {
+      "name": "DrawSplineLinear",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSplineLinear(const Vector2 *, int, float, Color)"
+    },
+    {
+      "name": "DrawSplineBasis",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSplineBasis(const Vector2 *, int, float, Color)"
+    },
+    {
+      "name": "DrawSplineCatmullRom",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSplineCatmullRom(const Vector2 *, int, float, Color)"
+    },
+    {
+      "name": "DrawSplineBezierQuadratic",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSplineBezierQuadratic(const Vector2 *, int, float, Color)"
+    },
+    {
+      "name": "DrawSplineBezierCubic",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSplineBezierCubic(const Vector2 *, int, float, Color)"
+    },
+    {
+      "name": "DrawSplineSegmentLinear",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSplineSegmentLinear(Vector2, Vector2, float, Color)"
+    },
+    {
+      "name": "DrawSplineSegmentBasis",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSplineSegmentBasis(Vector2, Vector2, Vector2, Vector2, float, Color)"
+    },
+    {
+      "name": "DrawSplineSegmentCatmullRom",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSplineSegmentCatmullRom(Vector2, Vector2, Vector2, Vector2, float, Color)"
+    },
+    {
+      "name": "DrawSplineSegmentBezierQuadratic",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSplineSegmentBezierQuadratic(Vector2, Vector2, Vector2, float, Color)"
+    },
+    {
+      "name": "DrawSplineSegmentBezierCubic",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSplineSegmentBezierCubic(Vector2, Vector2, Vector2, Vector2, float, Color)"
+    },
+    {
+      "name": "GetSplinePointLinear",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Vector2 GetSplinePointLinear(Vector2, Vector2, float)"
+    },
+    {
+      "name": "GetSplinePointBasis",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Vector2 GetSplinePointBasis(Vector2, Vector2, Vector2, Vector2, float)"
+    },
+    {
+      "name": "GetSplinePointCatmullRom",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Vector2 GetSplinePointCatmullRom(Vector2, Vector2, Vector2, Vector2, float)"
+    },
+    {
+      "name": "GetSplinePointBezierQuad",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Vector2 GetSplinePointBezierQuad(Vector2, Vector2, Vector2, float)"
+    },
+    {
+      "name": "GetSplinePointBezierCubic",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Vector2 GetSplinePointBezierCubic(Vector2, Vector2, Vector2, Vector2, float)"
+    },
+    {
+      "name": "CheckCollisionCircles",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "bool CheckCollisionCircles(Vector2, float, Vector2, float)"
+    },
+    {
+      "name": "CheckCollisionCircleRec",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "bool CheckCollisionCircleRec(Vector2, float, Rectangle)"
+    },
+    {
+      "name": "CheckCollisionCircleLine",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "bool CheckCollisionCircleLine(Vector2, float, Vector2, Vector2)"
+    },
+    {
+      "name": "CheckCollisionPointCircle",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "bool CheckCollisionPointCircle(Vector2, Vector2, float)"
+    },
+    {
+      "name": "GenImageGradientRadial",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Image GenImageGradientRadial(int, int, float, Color, Color)"
+    },
+    {
+      "name": "GenImageGradientSquare",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Image GenImageGradientSquare(int, int, float, Color, Color)"
+    },
+    {
+      "name": "GenImageWhiteNoise",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Image GenImageWhiteNoise(int, int, float)"
+    },
+    {
+      "name": "GenImagePerlinNoise",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Image GenImagePerlinNoise(int, int, int, int, float)"
+    },
+    {
+      "name": "ImageTextEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Image ImageTextEx(Font, const char *, float, float, Color)"
+    },
+    {
+      "name": "ImageAlphaCrop",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void ImageAlphaCrop(Image *, float)"
+    },
+    {
+      "name": "ImageAlphaClear",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void ImageAlphaClear(Image *, Color, float)"
+    },
+    {
+      "name": "ImageColorContrast",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void ImageColorContrast(Image *, float)"
+    },
+    {
+      "name": "GetImageAlphaBorder",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Rectangle GetImageAlphaBorder(Image, float)"
+    },
+    {
+      "name": "ImageDrawTextEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void ImageDrawTextEx(Image *, Font, const char *, Vector2, float, float, Color)"
+    },
+    {
+      "name": "DrawTextureEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawTextureEx(Texture2D, Vector2, float, float, Color)"
+    },
+    {
+      "name": "DrawTexturePro",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawTexturePro(Texture2D, Rectangle, Rectangle, Vector2, float, Color)"
+    },
+    {
+      "name": "DrawTextureNPatch",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawTextureNPatch(Texture2D, NPatchInfo, Rectangle, Vector2, float, Color)"
+    },
+    {
+      "name": "Fade",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Color Fade(Color, float)"
+    },
+    {
+      "name": "ColorBrightness",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Color ColorBrightness(Color, float)"
+    },
+    {
+      "name": "ColorContrast",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Color ColorContrast(Color, float)"
+    },
+    {
+      "name": "ColorAlpha",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Color ColorAlpha(Color, float)"
+    },
+    {
+      "name": "ColorLerp",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Color ColorLerp(Color, Color, float)"
+    },
+    {
+      "name": "DrawTextEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawTextEx(Font, const char *, Vector2, float, float, Color)"
+    },
+    {
+      "name": "DrawTextPro",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawTextPro(Font, const char *, Vector2, Vector2, float, float, float, Color)"
+    },
+    {
+      "name": "DrawTextCodepoint",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawTextCodepoint(Font, int, Vector2, float, Color)"
+    },
+    {
+      "name": "DrawTextCodepoints",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawTextCodepoints(Font, const int *, int, Vector2, float, float, Color)"
+    },
+    {
+      "name": "MeasureTextEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Vector2 MeasureTextEx(Font, const char *, float, float)"
+    },
+    {
+      "name": "MeasureTextCodepoints",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Vector2 MeasureTextCodepoints(Font, const int *, int, float, float)"
+    },
+    {
+      "name": "TextFormat",
+      "reason": "varargs",
+      "category": "intentional-0.1-scope",
+      "signature": "const char * TextFormat(const char *, ...)"
+    },
+    {
+      "name": "DrawCircle3D",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCircle3D(Vector3, float, Vector3, float, Color)"
+    },
+    {
+      "name": "DrawCube",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCube(Vector3, float, float, float, Color)"
+    },
+    {
+      "name": "DrawCubeWires",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCubeWires(Vector3, float, float, float, Color)"
+    },
+    {
+      "name": "DrawSphere",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSphere(Vector3, float, Color)"
+    },
+    {
+      "name": "DrawSphereEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSphereEx(Vector3, float, int, int, Color)"
+    },
+    {
+      "name": "DrawSphereWires",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawSphereWires(Vector3, float, int, int, Color)"
+    },
+    {
+      "name": "DrawCylinder",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCylinder(Vector3, float, float, float, int, Color)"
+    },
+    {
+      "name": "DrawCylinderEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCylinderEx(Vector3, Vector3, float, float, int, Color)"
+    },
+    {
+      "name": "DrawCylinderWires",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCylinderWires(Vector3, float, float, float, int, Color)"
+    },
+    {
+      "name": "DrawCylinderWiresEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCylinderWiresEx(Vector3, Vector3, float, float, int, Color)"
+    },
+    {
+      "name": "DrawCapsule",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCapsule(Vector3, Vector3, float, int, int, Color)"
+    },
+    {
+      "name": "DrawCapsuleWires",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawCapsuleWires(Vector3, Vector3, float, int, int, Color)"
+    },
+    {
+      "name": "DrawGrid",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawGrid(int, float)"
+    },
+    {
+      "name": "DrawModel",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawModel(Model, Vector3, float, Color)"
+    },
+    {
+      "name": "DrawModelEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawModelEx(Model, Vector3, Vector3, float, Vector3, Color)"
+    },
+    {
+      "name": "DrawModelWires",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawModelWires(Model, Vector3, float, Color)"
+    },
+    {
+      "name": "DrawModelWiresEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawModelWiresEx(Model, Vector3, Vector3, float, Vector3, Color)"
+    },
+    {
+      "name": "DrawBillboard",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void DrawBillboard(Camera, Texture2D, Vector3, float, Color)"
+    },
+    {
+      "name": "DrawBillboardPro",
+      "reason": "more-than-8-arguments",
+      "category": "intentional-0.1-scope",
+      "signature": "void DrawBillboardPro(Camera, Texture2D, Rectangle, Vector3, Vector3, Vector2, Vector2, float, Color)"
+    },
+    {
+      "name": "GenMeshPoly",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Mesh GenMeshPoly(int, float)"
+    },
+    {
+      "name": "GenMeshPlane",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Mesh GenMeshPlane(float, float, int, int)"
+    },
+    {
+      "name": "GenMeshSphere",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Mesh GenMeshSphere(float, int, int)"
+    },
+    {
+      "name": "GenMeshHemiSphere",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Mesh GenMeshHemiSphere(float, int, int)"
+    },
+    {
+      "name": "GenMeshCylinder",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Mesh GenMeshCylinder(float, float, int)"
+    },
+    {
+      "name": "GenMeshCone",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Mesh GenMeshCone(float, float, int)"
+    },
+    {
+      "name": "GenMeshTorus",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Mesh GenMeshTorus(float, float, int, int)"
+    },
+    {
+      "name": "GenMeshKnot",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "Mesh GenMeshKnot(float, float, int, int)"
+    },
+    {
+      "name": "UpdateModelAnimation",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void UpdateModelAnimation(Model, ModelAnimation, float)"
+    },
+    {
+      "name": "UpdateModelAnimationEx",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void UpdateModelAnimationEx(Model, ModelAnimation, float, ModelAnimation, float, float)"
+    },
+    {
+      "name": "CheckCollisionSpheres",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "bool CheckCollisionSpheres(Vector3, float, Vector3, float)"
+    },
+    {
+      "name": "CheckCollisionBoxSphere",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "bool CheckCollisionBoxSphere(BoundingBox, Vector3, float)"
+    },
+    {
+      "name": "GetRayCollisionSphere",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "RayCollision GetRayCollisionSphere(Ray, Vector3, float)"
+    },
+    {
+      "name": "SetSoundVolume",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SetSoundVolume(Sound, float)"
+    },
+    {
+      "name": "SetSoundPitch",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SetSoundPitch(Sound, float)"
+    },
+    {
+      "name": "SetSoundPan",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SetSoundPan(Sound, float)"
+    },
+    {
+      "name": "SeekMusicStream",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SeekMusicStream(Music, float)"
+    },
+    {
+      "name": "SetMusicVolume",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SetMusicVolume(Music, float)"
+    },
+    {
+      "name": "SetMusicPitch",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SetMusicPitch(Music, float)"
+    },
+    {
+      "name": "SetMusicPan",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SetMusicPan(Music, float)"
+    },
+    {
+      "name": "SetAudioStreamVolume",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SetAudioStreamVolume(AudioStream, float)"
+    },
+    {
+      "name": "SetAudioStreamPitch",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SetAudioStreamPitch(AudioStream, float)"
+    },
+    {
+      "name": "SetAudioStreamPan",
+      "reason": "mixed-top-level-f32",
+      "category": "stable-runtime-limit",
+      "signature": "void SetAudioStreamPan(AudioStream, float)"
+    }
+  ]
+}

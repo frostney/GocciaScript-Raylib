@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - macos-15
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install raylib build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            libasound2-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            ninja-build \
+            patch \
+            unzip \
+            xauth \
+            xvfb
+
+      - name: Build pinned raylib dynamic library
+        shell: bash
+        run: |
+          git clone --filter=blob:none https://github.com/raysan5/raylib.git "$RUNNER_TEMP/raylib"
+          git -C "$RUNNER_TEMP/raylib" checkout dbc56a87da87d973a9c5baa4e7438a9d20121d28
+          cmake \
+            -S "$RUNNER_TEMP/raylib" \
+            -B "$RUNNER_TEMP/raylib-build" \
+            -G Ninja \
+            -DBUILD_EXAMPLES=OFF \
+            -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/raylib-install"
+          cmake --build "$RUNNER_TEMP/raylib-build"
+          cmake --install "$RUNNER_TEMP/raylib-build"
+          echo "RAYLIB_INCLUDE_DIR=$RUNNER_TEMP/raylib-install/include" >> "$GITHUB_ENV"
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            ln -s "$RUNNER_TEMP/raylib-install/lib/libraylib.dylib" ./libraylib.dylib
+          else
+            ln -s "$RUNNER_TEMP/raylib-install/lib/libraylib.so" ./libraylib.so
+            echo "LD_LIBRARY_PATH=$RUNNER_TEMP/raylib-install/lib" >> "$GITHUB_ENV"
+          fi
+
+      - name: Download pinned GocciaScript release
+        shell: bash
+        run: |
+          case "$RUNNER_OS-$RUNNER_ARCH" in
+            macOS-ARM64)
+              asset="gocciascript-0.10.0-macos-arm64.zip"
+              ;;
+            macOS-X64)
+              asset="gocciascript-0.10.0-macos-x64.zip"
+              ;;
+            Linux-ARM64)
+              asset="gocciascript-0.10.0-linux-arm64.tar.gz"
+              ;;
+            Linux-X64)
+              asset="gocciascript-0.10.0-linux-x64.tar.gz"
+              ;;
+            *)
+              echo "Unsupported runner: $RUNNER_OS-$RUNNER_ARCH" >&2
+              exit 1
+              ;;
+          esac
+          curl --fail --location \
+            "https://github.com/frostney/GocciaScript/releases/download/0.10.0/$asset" \
+            --output "$RUNNER_TEMP/$asset"
+          mkdir -p "$RUNNER_TEMP/gocciascript"
+          if [[ "$asset" == *.zip ]]; then
+            unzip -q "$RUNNER_TEMP/$asset" -d "$RUNNER_TEMP/gocciascript"
+          else
+            tar -xzf "$RUNNER_TEMP/$asset" -C "$RUNNER_TEMP/gocciascript"
+          fi
+          loader="$(find "$RUNNER_TEMP/gocciascript" -type f -name GocciaScriptLoader -print -quit)"
+          test_runner="$(find "$RUNNER_TEMP/gocciascript" -type f -name GocciaTestRunner -print -quit)"
+          chmod +x "$loader" "$test_runner"
+          echo "GOCCIA_LOADER=$loader" >> "$GITHUB_ENV"
+          echo "GOCCIA_TEST_RUNNER=$test_runner" >> "$GITHUB_ENV"
+
+      - run: npm ci
+      - run: npm run generate
+      - run: git diff --exit-code
+      - run: npm test
+      - run: npm run check:generated
+      - run: npm run test:types
+      - run: npm run test:abi
+      - run: npm run test:ffi
+      - run: npm run pack:check
+
+      - name: Example startup smokes
+        shell: bash
+        run: |
+          mkdir -p .cache
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/basic-window-smoke.ts
+            xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/basic-input-smoke.ts
+            xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/image-loading-smoke.ts
+            xvfb-run -a "$GOCCIA_LOADER" examples/smoke.ts
+            xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/doom-smoke.ts
+          else
+            "$GOCCIA_LOADER" tests/fixtures/basic-window-smoke.ts
+            "$GOCCIA_LOADER" tests/fixtures/basic-input-smoke.ts
+            "$GOCCIA_LOADER" tests/fixtures/image-loading-smoke.ts
+            "$GOCCIA_LOADER" examples/smoke.ts
+            "$GOCCIA_LOADER" tests/fixtures/doom-smoke.ts
+          fi
+          test -s .cache/doom-smoke.png
+
+      - name: Goccia-executed DOOM GPL smoke
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a make -C examples/doom-gpl smoke
+          else
+            make -C examples/doom-gpl smoke
+          fi

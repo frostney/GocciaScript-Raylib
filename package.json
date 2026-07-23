@@ -1,0 +1,43 @@
+{
+  "name": "@frostney/gocciascript-raylib",
+  "version": "0.1.0",
+  "description": "Generated raylib 6.0 dynamic-library bindings for GocciaScript 0.10.0",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "files": [
+    "bindings/",
+    "examples/assets/",
+    "examples/basic-input.ts",
+    "examples/basic-window.ts",
+    "examples/bunnymark.ts",
+    "examples/doom-clone.ts",
+    "examples/image-loading.ts",
+    "examples/lib/",
+    "examples/smoke.ts",
+    "metadata/",
+    "vendor/raylib-6.0.normalized.json",
+    "goccia.json",
+    "SKIPPED.md",
+    "SKIPPED.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "vendor:update": "node scripts/fetch-pinned-assets.mjs",
+    "generate": "node scripts/normalize-api.mjs && node scripts/generate-bindings.mjs && node scripts/generate-abi.mjs",
+    "check:generated": "node scripts/check-generated.mjs",
+    "test": "npm run test:goccia:interpreter && npm run test:goccia:bytecode",
+    "test:goccia:interpreter": "\"${GOCCIA_TEST_RUNNER:-GocciaTestRunner}\" tests/unit",
+    "test:goccia:bytecode": "\"${GOCCIA_TEST_RUNNER:-GocciaTestRunner}\" tests/unit --mode=bytecode",
+    "test:types": "tsc --noEmit --strict --skipLibCheck false --lib ES2022 bindings/raylib.d.ts",
+    "test:abi": "node tests/integration/abi.test.mjs",
+    "test:ffi": "node tests/integration/ffi.test.mjs",
+    "pack:check": "node scripts/validate-package.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

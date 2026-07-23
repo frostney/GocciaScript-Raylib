@@ -1,0 +1,14 @@
+{
+  "source-type": "module",
+  "mode": "bytecode",
+  "unsafe-ffi": true,
+  "compat-asi": true,
+  "compat-function": true,
+  "compat-traditional-for-loop": true,
+  "compat-while-loops": true,
+  "compat-loose-equality": true,
+  "compat-var": true,
+  "compat-for-in-loop": true,
+  "compat-arguments-object": true,
+  "compat-label": true
+}
