@@ -31,6 +31,8 @@ const expectedFiles = new Set([
   "examples/image-loading.ts",
   "examples/bunnymark.ts",
   "examples/doom-clone.ts",
+  "examples/lib/bunny-instancing.ts",
+  "examples/lib/bunny-state.ts",
   "examples/lib/frames.ts",
   "examples/lib/run-bunnymark.ts",
   "examples/smoke.ts",

@@ -72,6 +72,7 @@ RUN npm ci \
   && xvfb-run -a GocciaScriptLoader tests/fixtures/basic-input-smoke.ts \
   && xvfb-run -a GocciaScriptLoader tests/fixtures/image-loading-smoke.ts \
   && xvfb-run -a GocciaScriptLoader examples/smoke.ts \
+  && xvfb-run -a npm run test:bunnymark:visual \
   && xvfb-run -a GocciaScriptLoader tests/fixtures/doom-smoke.ts \
   && test -s .cache/doom-smoke.png \
   && xvfb-run -a make -C examples/doom-gpl smoke
