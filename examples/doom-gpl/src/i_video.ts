@@ -48,13 +48,15 @@ const camera = Camera2D.create({
 let video = null;
 let playpal = null;
 let paletteIndex = 0;
+let packedPaletteIndex = -1;
 let image = null;
 let texture = null;
 let initialized = false;
 
 const refreshPackedPalette = (): void => {
-  if (playpal === null) return;
+  if (playpal === null || packedPaletteIndex === paletteIndex) return;
   packPaletteBytes(playpal, paletteIndex, packedPaletteBytes);
+  packedPaletteIndex = paletteIndex;
 };
 
 const I_InitGraphics = (): void => {
@@ -76,6 +78,7 @@ const I_InitGraphics = (): void => {
 
 const I_RegisterPlaypal = (paletteBytes: Uint8Array): void => {
   playpal = paletteBytes;
+  packedPaletteIndex = -1;
   refreshPackedPalette();
 };
 
@@ -108,7 +111,7 @@ const I_ShutdownGraphics = (): void => {
 };
 
 const I_RestoreDefaultPalette = (): void => {
-  paletteIndex = 0;
+  I_SetPalette(0);
 };
 
 export default {
