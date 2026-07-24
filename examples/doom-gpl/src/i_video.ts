@@ -23,7 +23,6 @@ import {
   LoadTextureFromImage,
   PIXELFORMAT_UNCOMPRESSED_GRAYSCALE,
   PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
-  RAYWHITE,
   SetShaderValueTexture,
   SetExitKey,
   SetTargetFPS,
@@ -35,6 +34,7 @@ import {
   UnloadTexture,
   UpdateTexture,
   Vector2,
+  WHITE,
   closeRaylib,
 } from "../../../bindings/raylib.ts";
 import {
@@ -161,6 +161,7 @@ const initializeIndexedShader = (): boolean => {
     return false;
   }
 
+  uploadedPaletteIndex = -1;
   indexedShaderActive = true;
   return true;
 };
@@ -215,10 +216,10 @@ const I_FinishUpdate = (): void => {
   if (indexedShaderActive) {
     BeginShaderMode(shader);
     SetShaderValueTexture(shader, paletteLocation, paletteTexture);
-    DrawTexture(indexedTexture, 0, 0, RAYWHITE);
+    DrawTexture(indexedTexture, 0, 0, WHITE);
     EndShaderMode();
   } else {
-    DrawTexture(rgbaTexture, 0, 0, RAYWHITE);
+    DrawTexture(rgbaTexture, 0, 0, WHITE);
   }
   EndMode2D();
   if (showFps) DrawFPS(8, 8);
