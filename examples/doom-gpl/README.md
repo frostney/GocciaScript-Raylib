@@ -88,10 +88,12 @@ make test-palette
 make smoke
 ```
 
-`make test-palette` checks the packed palette conversion against the original
-byte-wise RGBA result in both interpreter and bytecode modes. The palette and
-framebuffer use paired byte and 32-bit views, so the copied bytes remain RGBA
-on either little- or big-endian hosts.
+`make test-palette` checks all 256 palette indices across all 14 DOOM
+`PLAYPAL` slots against the packed RGBA fallback in both interpreter and
+bytecode modes. The palette and fallback framebuffer use paired byte and
+32-bit views, so the copied bytes remain RGBA on either little- or big-endian
+hosts. `make smoke` uses the indexed-texture shader when available and falls
+back to the packed RGBA display path if shader setup fails.
 
 `make smoke` runs deterministic engine frames against cached Freedoom data and
 writes `.cache/doom-goccia-smoke.png`. The current upstream port claims vanilla
