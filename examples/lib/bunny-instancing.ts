@@ -71,6 +71,8 @@ export const createBunnyInstancing = (texture) => {
   }
 
   const meshImage = GenImageColor(2, 2, WHITE);
+  // GenMeshHeightmap supplies an uploaded 6-vertex mesh; both useful buffers
+  // are completely replaced below to form the sprite quad.
   const mesh = GenMeshHeightmap(
     meshImage,
     Vector3.create({ x: texture.width, y: 0, z: texture.height }),
