@@ -18,9 +18,10 @@ FREEDOOM_WAD := $(CACHE_DIR)/freedoom-$(FREEDOOM_VERSION)/freedoom1.wad
 CACHED_IWAD := $(CACHE_DIR)/iwad.wad
 
 GOCCIA_LOADER ?= GocciaScriptLoader
+GOCCIA_TEST_RUNNER ?= GocciaTestRunner
 GOCCIA_CONFIG := examples/doom-gpl/goccia.json
 
-.PHONY: all clean fetch freedoom prepare run run-freedoom smoke verify-source
+.PHONY: all clean fetch freedoom prepare run run-freedoom smoke test-palette verify-source
 
 all: prepare
 
@@ -84,6 +85,10 @@ smoke: prepare freedoom
 	cp "$(FREEDOOM_WAD)" "$(CACHED_IWAD)"
 	cd "$(PROJECT_ROOT)" && "$(GOCCIA_LOADER)" examples/doom-gpl/smoke.ts --config="$(GOCCIA_CONFIG)"
 	@test -s "$(CACHE_DIR)/doom-goccia-smoke.png"
+
+test-palette:
+	cd "$(PROJECT_ROOT)" && "$(GOCCIA_TEST_RUNNER)" examples/doom-gpl/tests --config="$(GOCCIA_CONFIG)" --mode=interpreted
+	cd "$(PROJECT_ROOT)" && "$(GOCCIA_TEST_RUNNER)" examples/doom-gpl/tests --config="$(GOCCIA_CONFIG)" --mode=bytecode
 
 clean:
 	@if [ "$(CACHE_DIR)" = "$(CURDIR)/.cache" ]; then \
