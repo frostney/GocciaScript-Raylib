@@ -1,6 +1,12 @@
 import abiProbe from "../abi/layout-probe.ts" with { type: "text" };
 import basicInput from "../../examples/basic-input.ts" with { type: "text" };
 import basicWindow from "../../examples/basic-window.ts" with { type: "text" };
+import bunnyInstancing from "../../examples/lib/bunny-instancing.ts" with {
+  type: "text",
+};
+import bunnyState from "../../examples/lib/bunny-state.ts" with {
+  type: "text",
+};
 import bunnymark from "../../examples/lib/run-bunnymark.ts" with {
   type: "text",
 };
@@ -18,6 +24,8 @@ describe("default GocciaScript syntax", () => {
       abiProbe,
       basicInput,
       basicWindow,
+      bunnyInstancing,
+      bunnyState,
       bunnymark,
       doomClone,
       ffiSmoke,

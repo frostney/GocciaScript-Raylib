@@ -117,11 +117,15 @@ performance case for compatibility loops:
 | indexed `while` | 4.02 | 6.3692 s |
 
 The current `for...of` loop stays, and both legacy loop flags remain disabled.
-That loop experiment predates the application-side import aliases and scalar
-bunny state: the optimized 10,000-sprite workload now measures 12.13 FPS on the
-same machine and runtime. [Loop methodology](benchmarks/bunnymark-loop-syntax.md)
-and [current application-side validation](benchmarks/application-performance.md)
-are recorded in the repository.
+That loop experiment predates the application-side import aliases and the
+public-raylib instanced drawing path. With the import-binding fast path held
+constant, the 10,000-sprite workload now measures 30.35 FPS versus the
+12.99-FPS `DrawTextureV` baseline. The renderer uses `DrawMeshInstanced` and a
+custom shader through the generated bindings; it has no companion native
+library. [Loop methodology](benchmarks/bunnymark-loop-syntax.md),
+[the preceding application baseline](benchmarks/application-performance.md),
+and [the instancing validation](benchmarks/bunnymark-instancing.md) are
+recorded in the repository.
 
 ## Project scripts and tests
 

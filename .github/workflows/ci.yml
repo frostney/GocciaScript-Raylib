@@ -126,6 +126,7 @@ jobs:
           xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/basic-input-smoke.ts
           xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/image-loading-smoke.ts
           xvfb-run -a "$GOCCIA_LOADER" examples/smoke.ts
+          xvfb-run -a npm run test:bunnymark:visual
           xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/doom-smoke.ts
           test -s .cache/doom-smoke.png
 
