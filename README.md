@@ -101,9 +101,9 @@ The full engine legitimately uses classic `for`, `while`, and `do...while`
 loops. Their compatibility flags are scoped to `examples/doom-gpl/goccia.json`;
 the bindings and smaller MIT examples do not enable them. The initial
 GocciaScript 0.10.0 implementation rendered at roughly 3 FPS on an Apple M1
-Max. Caching the framebuffer length and using the packed-palette display path
-raised the profiled steady-state estimate to 4.71 FPS, so it is genuine but not
-yet real-time.
+Max. The packed-palette fallback reaches 4.97 FPS, and presenting the indexed
+framebuffer through a palette-texture shader reaches 6.32 FPS in controlled
+steady-state measurements. It is genuine but not yet real-time.
 
 ## Bunnymark performance
 

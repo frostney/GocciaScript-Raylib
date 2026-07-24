@@ -45,7 +45,20 @@ workload, so the reproduced candidate reduces end-to-end execution time by
 about 32%. This includes startup and is separate from the profiler's 4.71 FPS
 steady-state estimate.
 
-The deterministic frame-8 smoke screenshot has zero changed pixels below the
-FPS overlay compared with the retained byte-wise conversion baseline. The
-focused palette test also checks all 256 palette entries, with 1,024 byte-level
-assertions in each of interpreter and bytecode modes.
+The indexed-texture shader was measured in five paired runs against that packed
+RGBA fallback, alternating path order. Each run discarded 12 warm-up frames and
+timed the next 24 frames with raylib's monotonic clock, for 120 measured frames
+per path. The normal FPS overlay and periodic garbage collections remained
+enabled.
+
+| Display path | Mean frame time | Mean FPS | FPS range | Sample SD |
+|---|---:|---:|---:|---:|
+| packed RGBA fallback | 201.22 ms | 4.97 | 4.96-5.00 | 0.016 |
+| indexed-texture shader | 158.33 ms | 6.32 | 6.28-6.35 | 0.028 |
+
+The shader reduces whole-frame time by 21.31% and raises steady-state
+performance by 1.27x for this stationary early-E1M1 scene. The deterministic
+frame-8 shader and fallback screenshots are byte-identical when only the live
+FPS overlay is disabled. The focused palette test checks all 256 entries in all
+14 palette slots with 28,672 assertions in each of interpreter and bytecode
+modes.

@@ -50,7 +50,7 @@ verify-source: fetch
 	@test ! -e "$(UPSTREAM_DIR)/DOOM-SHAREWARE.WAD"
 	@echo "Pure-JavaScript LinuxDoom source pin and GPL boundary verified."
 
-$(GENERATED_STAMP): verify-source prepare-port.mjs src/i_input.ts src/i_sound.ts src/i_video.ts
+$(GENERATED_STAMP): verify-source prepare-port.mjs src/i_input.ts src/i_sound.ts src/i_video.ts src/palette.ts
 	node prepare-port.mjs "$(UPSTREAM_DIR)" "$(GENERATED_DIR)"
 	touch "$@"
 
