@@ -18,23 +18,26 @@ import {
   LoadTextureFromImage,
   MOUSE_BUTTON_LEFT,
   RAYWHITE,
+  SetRandomSeed,
   SetTargetFPS,
+  TakeScreenshot,
   UnloadImage,
   UnloadTexture,
   Vector2,
   WindowShouldClose,
   closeRaylib,
 } from "../../bindings/raylib.ts";
+import {
+  addBunnies,
+  createBunnyState,
+  updateBunnies,
+} from "./bunny-state.ts";
+import {
+  createBunnyInstancing,
+  drawBunnyInstances,
+  unloadBunnyInstancing,
+} from "./bunny-instancing.ts";
 import { frameNumbers } from "./frames.ts";
-
-type Bunny = {
-  x: number;
-  y: number;
-  velocityX: number;
-  velocityY: number;
-  drawPosition: { x: number; y: number };
-  color: unknown;
-};
 
 // Generated raylib bindings are immutable const exports. Reading them once
 // avoids repeated import resolution while preserving the binding API.
@@ -57,7 +60,9 @@ const loadImageFromMemory = LoadImageFromMemory;
 const loadTextureFromImage = LoadTextureFromImage;
 const mouseButtonLeft = MOUSE_BUTTON_LEFT;
 const raywhite = RAYWHITE;
+const setRandomSeed = SetRandomSeed;
 const setTargetFps = SetTargetFPS;
+const takeScreenshot = TakeScreenshot;
 const unloadImage = UnloadImage;
 const unloadTexture = UnloadTexture;
 const vector2Type = Vector2;
@@ -67,34 +72,6 @@ const closeRaylibBinding = closeRaylib;
 const screenWidth: number = 1280;
 const screenHeight: number = 720;
 const maxBunnies: number = 50000;
-
-const randomColor = () => {
-  return colorType.create({
-    r: getRandomValue(50, 240),
-    g: getRandomValue(50, 240),
-    b: getRandomValue(50, 240),
-    a: 255,
-  });
-};
-
-const addBunnies = (bunnies: Bunny[], count: number): void => {
-  for (const _index of frameNumbers(count)) {
-    if (bunnies.length >= maxBunnies) break;
-    const x = screenWidth / 2;
-    const y = screenHeight / 2;
-    bunnies.push({
-      x,
-      y,
-      velocityX: getRandomValue(-250, 250) / 60,
-      velocityY: getRandomValue(-250, 250) / 60,
-      drawPosition: vector2Type.create({
-        x,
-        y,
-      }),
-      color: randomColor(),
-    });
-  }
-};
 
 export const runBunnymark = (
   bunnyBytes: Uint8Array,
@@ -109,62 +86,124 @@ export const runBunnymark = (
   initWindow(screenWidth, screenHeight, "GocciaScript + raylib: Bunnymark");
   const texture = loadTextureFromImage(image);
   unloadImage(image);
-  setTargetFps(60);
 
-  const bunnies: Bunny[] = [];
-  addBunnies(bunnies, 1000);
+  const configuredSeed = globalThis.BUNNYMARK_RANDOM_SEED;
+  const configuredInitialSprites =
+    globalThis.BUNNYMARK_INITIAL_SPRITES;
+  const configuredTargetFps = globalThis.BUNNYMARK_TARGET_FPS;
+  const configuredDeltaScale = globalThis.BUNNYMARK_FIXED_DELTA_SCALE;
+  const requestedDrawPath = globalThis.BUNNYMARK_DRAW_PATH === "direct"
+    ? "direct"
+    : "instanced";
+  const initialSprites = typeof configuredInitialSprites === "number"
+    ? configuredInitialSprites
+    : 1000;
+  const targetFps = typeof configuredTargetFps === "number"
+    ? configuredTargetFps
+    : 60;
+  const fixedDeltaScale = typeof configuredDeltaScale === "number"
+    ? configuredDeltaScale
+    : null;
+  const showOverlay = globalThis.BUNNYMARK_SHOW_OVERLAY !== false;
+  const capturePath = globalThis.BUNNYMARK_CAPTURE_PATH;
+  const captureFrame = typeof globalThis.BUNNYMARK_CAPTURE_FRAME === "number"
+    ? globalThis.BUNNYMARK_CAPTURE_FRAME
+    : 0;
+  const reportFinal = globalThis.BUNNYMARK_REPORT_FINAL === true;
+
+  if (typeof configuredSeed === "number") setRandomSeed(configuredSeed);
+  setTargetFps(targetFps);
+
+  const bunnies = createBunnyState(maxBunnies);
+  addBunnies(
+    bunnies,
+    initialSprites,
+    screenWidth / 2,
+    screenHeight / 2,
+    getRandomValue,
+  );
+  const instancing = requestedDrawPath === "instanced"
+    ? createBunnyInstancing(texture)
+    : null;
+  const drawPath = instancing === null ? "direct" : "instanced";
+  const drawPosition = vector2Type.create({ x: 0, y: 0 });
+  const drawColor = colorType.create({ r: 0, g: 0, b: 0, a: 255 });
   const startupMilliseconds = Date.now() - startedAt;
   console.log(
     "Bunnymark startup_ms=" +
       startupMilliseconds +
       " initial_sprites=" +
-      bunnies.length,
+      bunnies.length +
+      " draw_path=" +
+      drawPath,
   );
 
+  const framesStartedAt = Date.now();
+  let framesRendered = 0;
   let framesSinceReport = 0;
   let reportStartedAt = Date.now();
 
   try {
-    for (const _frame of frameNumbers(maxFrames)) {
+    for (const frame of frameNumbers(maxFrames)) {
       if (windowShouldClose()) break;
-      const deltaScale = getFrameTime() * 60;
+      const deltaScale = fixedDeltaScale === null
+        ? getFrameTime() * 60
+        : fixedDeltaScale;
       if (
         isMouseButtonDown(mouseButtonLeft) ||
         isKeyDown(keySpace)
       ) {
-        addBunnies(bunnies, 100);
+        addBunnies(
+          bunnies,
+          100,
+          screenWidth / 2,
+          screenHeight / 2,
+          getRandomValue,
+        );
       }
 
-      for (const bunny of bunnies) {
-        bunny.x += bunny.velocityX * deltaScale;
-        bunny.y += bunny.velocityY * deltaScale;
-
-        if (
-          bunny.x + texture.width / 2 > screenWidth ||
-          bunny.x + texture.width / 2 < 0
-        ) {
-          bunny.velocityX *= -1;
-        }
-        if (
-          bunny.y + texture.height / 2 > screenHeight ||
-          bunny.y + texture.height / 2 - 40 < 0
-        ) {
-          bunny.velocityY *= -1;
-        }
-      }
+      updateBunnies(
+        bunnies,
+        deltaScale,
+        texture.width,
+        texture.height,
+        screenWidth,
+        screenHeight,
+      );
 
       beginDrawing();
       clearBackground(black);
-      for (const bunny of bunnies) {
-        bunny.drawPosition.x = bunny.x;
-        bunny.drawPosition.y = bunny.y;
-        drawTextureV(texture, bunny.drawPosition, bunny.color);
+      if (instancing !== null) {
+        drawBunnyInstances(instancing, bunnies);
+      } else {
+        for (const index of bunnies.indices) {
+          const colorOffset = index * 4;
+          drawPosition.x = bunnies.x[index];
+          drawPosition.y = bunnies.y[index];
+          drawColor.r = bunnies.colors[colorOffset];
+          drawColor.g = bunnies.colors[colorOffset + 1];
+          drawColor.b = bunnies.colors[colorOffset + 2];
+          drawColor.a = bunnies.colors[colorOffset + 3];
+          drawTextureV(texture, drawPosition, drawColor);
+        }
       }
-      drawText("bunnies: " + bunnies.length, 12, 10, 20, raywhite);
-      drawText("hold mouse-left or Space to add 100", 12, 34, 20, raywhite);
-      drawFps(screenWidth - 100, 10);
+      if (showOverlay) {
+        drawText("bunnies: " + bunnies.length, 12, 10, 20, raywhite);
+        drawText(
+          "hold mouse-left or Space to add 100",
+          12,
+          34,
+          20,
+          raywhite,
+        );
+        drawFps(screenWidth - 100, 10);
+      }
       endDrawing();
+      if (typeof capturePath === "string" && frame === captureFrame) {
+        takeScreenshot(capturePath);
+      }
 
+      framesRendered += 1;
       framesSinceReport += 1;
       const now = Date.now();
       if (now - reportStartedAt >= 5000) {
@@ -175,6 +214,8 @@ export const runBunnymark = (
             framesSinceReport +
             " sprites=" +
             bunnies.length +
+            " draw_path=" +
+            drawPath +
             " observed_fps=" +
             measuredFps.toFixed(1),
         );
@@ -183,7 +224,26 @@ export const runBunnymark = (
       }
     }
   } finally {
-    unloadTexture(texture);
+    if (reportFinal) {
+      const frameMilliseconds = Date.now() - framesStartedAt;
+      const observedFps = frameMilliseconds === 0
+        ? 0
+        : (framesRendered * 1000) / frameMilliseconds;
+      console.log(
+        "Bunnymark summary frames=" +
+          framesRendered +
+          " sprites=" +
+          bunnies.length +
+          " draw_path=" +
+          drawPath +
+          " frame_ms=" +
+          frameMilliseconds +
+          " observed_fps=" +
+          observedFps.toFixed(2),
+      );
+    }
+    if (instancing === null) unloadTexture(texture);
+    else unloadBunnyInstancing(instancing);
     closeWindow();
     closeRaylibBinding();
   }

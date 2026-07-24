@@ -35,6 +35,7 @@
     "test:types": "tsc --noEmit --strict --skipLibCheck false --lib ES2022 bindings/raylib.d.ts",
     "test:abi": "node tests/integration/abi.test.mjs",
     "test:ffi": "node tests/integration/ffi.test.mjs",
+    "test:bunnymark:visual": "node tests/integration/bunnymark-visual.test.mjs",
     "pack:check": "node scripts/validate-package.mjs"
   },
   "devDependencies": {
