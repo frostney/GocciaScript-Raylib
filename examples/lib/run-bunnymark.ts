@@ -28,20 +28,51 @@ import {
 import { frameNumbers } from "./frames.ts";
 
 type Bunny = {
-  position: { x: number; y: number };
-  speed: { x: number; y: number };
+  x: number;
+  y: number;
+  velocityX: number;
+  velocityY: number;
+  drawPosition: { x: number; y: number };
   color: unknown;
 };
+
+// Generated raylib bindings are immutable const exports. Reading them once
+// avoids repeated import resolution while preserving the binding API.
+const black = BLACK;
+const beginDrawing = BeginDrawing;
+const clearBackground = ClearBackground;
+const closeWindow = CloseWindow;
+const colorType = Color;
+const drawFps = DrawFPS;
+const drawText = DrawText;
+const drawTextureV = DrawTextureV;
+const endDrawing = EndDrawing;
+const getFrameTime = GetFrameTime;
+const getRandomValue = GetRandomValue;
+const initWindow = InitWindow;
+const isKeyDown = IsKeyDown;
+const isMouseButtonDown = IsMouseButtonDown;
+const keySpace = KEY_SPACE;
+const loadImageFromMemory = LoadImageFromMemory;
+const loadTextureFromImage = LoadTextureFromImage;
+const mouseButtonLeft = MOUSE_BUTTON_LEFT;
+const raywhite = RAYWHITE;
+const setTargetFps = SetTargetFPS;
+const unloadImage = UnloadImage;
+const unloadTexture = UnloadTexture;
+const vector2Type = Vector2;
+const windowShouldClose = WindowShouldClose;
+const closeRaylibBinding = closeRaylib;
 
 const screenWidth: number = 1280;
 const screenHeight: number = 720;
 const maxBunnies: number = 50000;
 
 const randomColor = () => {
-  return Color.create({
-    r: GetRandomValue(50, 240),
-    g: GetRandomValue(50, 240),
-    b: GetRandomValue(50, 240),
+  return colorType.create({
+    r: getRandomValue(50, 240),
+    g: getRandomValue(50, 240),
+    b: getRandomValue(50, 240),
     a: 255,
   });
 };
@@ -49,14 +80,16 @@ const randomColor = () => {
 const addBunnies = (bunnies: Bunny[], count: number): void => {
   for (const _index of frameNumbers(count)) {
     if (bunnies.length >= maxBunnies) break;
+    const x = screenWidth / 2;
+    const y = screenHeight / 2;
     bunnies.push({
-      position: Vector2.create({
-        x: screenWidth / 2,
-        y: screenHeight / 2,
-      }),
-      speed: Vector2.create({
-        x: GetRandomValue(-250, 250) / 60,
-        y: GetRandomValue(-250, 250) / 60,
+      x,
+      y,
+      velocityX: getRandomValue(-250, 250) / 60,
+      velocityY: getRandomValue(-250, 250) / 60,
+      drawPosition: vector2Type.create({
+        x,
+        y,
       }),
       color: randomColor(),
     });
@@ -68,15 +101,15 @@ export const runBunnymark = (
   maxFrames: number,
 ): void => {
   const startedAt = Date.now();
-  const image = LoadImageFromMemory(".png", bunnyBytes, bunnyBytes.length);
+  const image = loadImageFromMemory(".png", bunnyBytes, bunnyBytes.length);
   if (image.width !== 32 || image.height !== 32) {
     throw new Error("raybunny PNG failed to decode");
   }
 
-  InitWindow(screenWidth, screenHeight, "GocciaScript + raylib: Bunnymark");
-  const texture = LoadTextureFromImage(image);
-  UnloadImage(image);
-  SetTargetFPS(60);
+  initWindow(screenWidth, screenHeight, "GocciaScript + raylib: Bunnymark");
+  const texture = loadTextureFromImage(image);
+  unloadImage(image);
+  setTargetFps(60);
 
   const bunnies: Bunny[] = [];
   addBunnies(bunnies, 1000);
@@ -93,42 +126,44 @@ export const runBunnymark = (
 
   try {
     for (const _frame of frameNumbers(maxFrames)) {
-      if (WindowShouldClose()) break;
-      const deltaScale = GetFrameTime() * 60;
+      if (windowShouldClose()) break;
+      const deltaScale = getFrameTime() * 60;
       if (
-        IsMouseButtonDown(MOUSE_BUTTON_LEFT) ||
-        IsKeyDown(KEY_SPACE)
+        isMouseButtonDown(mouseButtonLeft) ||
+        isKeyDown(keySpace)
       ) {
         addBunnies(bunnies, 100);
       }
 
       for (const bunny of bunnies) {
-        bunny.position.x += bunny.speed.x * deltaScale;
-        bunny.position.y += bunny.speed.y * deltaScale;
+        bunny.x += bunny.velocityX * deltaScale;
+        bunny.y += bunny.velocityY * deltaScale;
 
         if (
-          bunny.position.x + texture.width / 2 > screenWidth ||
-          bunny.position.x + texture.width / 2 < 0
+          bunny.x + texture.width / 2 > screenWidth ||
+          bunny.x + texture.width / 2 < 0
         ) {
-          bunny.speed.x *= -1;
+          bunny.velocityX *= -1;
         }
         if (
-          bunny.position.y + texture.height / 2 > screenHeight ||
-          bunny.position.y + texture.height / 2 - 40 < 0
+          bunny.y + texture.height / 2 > screenHeight ||
+          bunny.y + texture.height / 2 - 40 < 0
         ) {
-          bunny.speed.y *= -1;
+          bunny.velocityY *= -1;
         }
       }
 
-      BeginDrawing();
-      ClearBackground(BLACK);
+      beginDrawing();
+      clearBackground(black);
       for (const bunny of bunnies) {
-        DrawTextureV(texture, bunny.position, bunny.color);
+        bunny.drawPosition.x = bunny.x;
+        bunny.drawPosition.y = bunny.y;
+        drawTextureV(texture, bunny.drawPosition, bunny.color);
       }
-      DrawText("bunnies: " + bunnies.length, 12, 10, 20, RAYWHITE);
-      DrawText("hold mouse-left or Space to add 100", 12, 34, 20, RAYWHITE);
-      DrawFPS(screenWidth - 100, 10);
-      EndDrawing();
+      drawText("bunnies: " + bunnies.length, 12, 10, 20, raywhite);
+      drawText("hold mouse-left or Space to add 100", 12, 34, 20, raywhite);
+      drawFps(screenWidth - 100, 10);
+      endDrawing();
 
       framesSinceReport += 1;
       const now = Date.now();
@@ -148,8 +183,8 @@ export const runBunnymark = (
       }
     }
   } finally {
-    UnloadTexture(texture);
-    CloseWindow();
-    closeRaylib();
+    unloadTexture(texture);
+    closeWindow();
+    closeRaylibBinding();
   }
 };

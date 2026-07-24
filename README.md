@@ -100,8 +100,10 @@ directory is excluded from the MIT npm tarball.
 The full engine legitimately uses classic `for`, `while`, and `do...while`
 loops. Their compatibility flags are scoped to `examples/doom-gpl/goccia.json`;
 the bindings and smaller MIT examples do not enable them. The initial
-GocciaScript 0.10.0 implementation renders at roughly 3 FPS on an Apple M1 Max,
-so it is genuine but not yet real-time.
+GocciaScript 0.10.0 implementation rendered at roughly 3 FPS on an Apple M1
+Max. Caching the framebuffer length and using the packed-palette display path
+raised the profiled steady-state estimate to 4.71 FPS, so it is genuine but not
+yet real-time.
 
 ## Bunnymark performance
 
@@ -114,9 +116,11 @@ performance case for compatibility loops:
 | indexed classic `for` | 3.96 | 6.4842 s |
 | indexed `while` | 4.02 | 6.3692 s |
 
-The result is dominated by rendering and the per-sprite `DrawTextureV` FFI
-crossing. The current `for...of` loop stays, and both legacy loop flags remain
-disabled. [Full methodology and raw results](benchmarks/bunnymark-loop-syntax.md)
+The current `for...of` loop stays, and both legacy loop flags remain disabled.
+That loop experiment predates the application-side import aliases and scalar
+bunny state: the optimized 10,000-sprite workload now measures 12.13 FPS on the
+same machine and runtime. [Loop methodology](benchmarks/bunnymark-loop-syntax.md)
+and [current application-side validation](benchmarks/application-performance.md)
 are recorded in the repository.
 
 ## Project scripts and tests
