@@ -4,12 +4,24 @@ Last updated: 2026-10-01
 
 ## Current task
 
-Move the repository from GocciaScript 0.10.0 to 0.14.0 and replace the
-workarounds that 0.10.0 forced with what 0.11.0 to 0.14.0 provide natively.
+Collect Bunnymark numbers for GocciaScript 0.10.0 versus 0.14.0 across
+Johannes's machines, then update `benchmarks/import-binding-aliases.md`.
 
-State: implemented and validated locally on the branch `t3code/4b7db725`, and
-published as a pull request. Merging is left to Johannes. After the merge the
-repository gets its first tag; the tag name is not decided yet.
+State: the 0.14.0 update is merged (PR #11, merge commit `3eeab1f`) and tagged
+`0.1.0`. On the branch `bench/fleet-bunnymark` there is an uncommitted
+`benchmarks/fleet-bunnymark.sh`, which runs the comparison on one machine and
+prints a Markdown table.
+
+Fleet results so far, 10,000 sprites, 100 frames, three interleaved runs:
+
+| Machine | Renderer | Instanced 0.10.0 -> 0.14.0 | Direct 0.10.0 -> 0.14.0 |
+|---|---|---|---|
+| boiler (Ryzen 9 6900HX, Linux) | Radeon RX 6600M | 31.3 -> 37.4 FPS | 10.2 -> 10.0 FPS |
+| boiler | Radeon 680M | 31.4 -> 37.8 FPS | 10.2 -> 10.6 FPS |
+| boiler | llvmpipe under Xvfb | 20.7 -> 23.0 FPS | 8.8 -> 9.1 FPS |
+
+Not measured: `burnside` and `firepit` (both macOS). Neither accepts SSH from
+boiler; `firepit` was offline.
 
 ## What changed
 
@@ -76,13 +88,10 @@ frame in its 10,000 native calls.
 - Callback-taking raylib functions accept `FFI.callback(...).create(fn)` handles
   at run time, but `FFIPointerInput` does not type them. This predates the
   update.
-- Which name the first tag gets. `github:` provider imports and npm
-  publication both depend on it.
 
 ## Next steps
 
-1. Merge the pull request once CI is green on both lanes.
-2. Tag the merge commit.
-3. Collect Bunnymark numbers across machines, then update
-   `benchmarks/import-binding-aliases.md`.
-4. Optimise the Bunnymark update loop, which now bounds the instanced path.
+1. Run `benchmarks/fleet-bunnymark.sh` on `burnside` and `firepit`, either by
+   enabling Remote Login there or by running it by hand from a clone.
+2. Update `benchmarks/import-binding-aliases.md` with the fleet table.
+3. Optimise the Bunnymark update loop, which bounds the instanced path.

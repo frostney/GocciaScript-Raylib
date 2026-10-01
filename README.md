@@ -181,7 +181,8 @@ directly.
 [the preceding application baseline](benchmarks/application-performance.md),
 [the instancing validation](benchmarks/bunnymark-instancing.md), and
 [the import-alias removal](benchmarks/import-binding-aliases.md) are recorded
-in the repository.
+in the repository. `benchmarks/fleet-bunnymark.sh` repeats the 0.10.0 versus
+0.14.0 comparison on any macOS or Linux machine and prints its table rows.
 
 ## Project scripts and tests
 
