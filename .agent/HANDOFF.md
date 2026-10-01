@@ -4,118 +4,196 @@ Last updated: 2026-10-01
 
 ## Current task
 
-Nothing is in flight. The 0.14.0 update is merged (PR #11, merge commit
-`3eeab1f`) and tagged `0.1.0`. PR #12 adds `benchmarks/fleet-bunnymark.sh` and
-records the fleet results in `benchmarks/import-binding-aliases.md`.
+Make Bunnymark faster. Nothing is implemented yet; this file records the
+measurements and the plan.
 
-The next piece of work is Bunnymark performance; see "Next steps".
+The work splits in two:
 
-Fleet results, 10,000 sprites, 100 frames, three interleaved runs:
+- **This repository**: a small change to `updateBunnies` that removes about a
+  quarter of the update time with identical output.
+- **GocciaScript**: the per-opcode cost of the bytecode VM is the real ceiling.
+  This file gives the profile and a raylib-free reproduction to take there.
 
-| Machine | Renderer | Instanced 0.10.0 -> 0.14.0 | Direct 0.10.0 -> 0.14.0 |
-|---|---|---|---|
-| boiler (Ryzen 9 6900HX, Linux) | Radeon RX 6600M | 31.3 -> 37.4 FPS | 10.2 -> 10.0 FPS |
-| boiler | Radeon 680M | 31.4 -> 37.8 FPS | 10.2 -> 10.6 FPS |
-| boiler | llvmpipe under Xvfb | 20.7 -> 23.0 FPS | 8.8 -> 9.1 FPS |
-| firepit (Apple M5 Max, macOS 27.0.1) | Apple M5 Max | 51.5 -> 62.0 FPS | 17.8 -> 18.2 FPS |
-| burnside (Apple M1 Max, macOS 26.5.2) | Apple M1 Max | 26.9 -> 30.9 FPS | 10.2 -> 10.5 FPS |
+## State of the repository
 
-The whole fleet is measured and recorded in
-`benchmarks/import-binding-aliases.md`. The Macs do not accept SSH; they were
-driven through lantaarn (`lantaarn-ctl` from boiler over Tailscale), which was
-capturing the screen at 30 FPS during the runs.
+- `main` is at the merge of PR #12. The 0.14.0 update (PR #11) is tagged
+  `0.1.0`.
+- `benchmarks/fleet-bunnymark.sh` compares a 0.10.0 revision with a current
+  one on any machine. `CURRENT_REF=<ref>` selects the revision to measure.
+- `benchmarks/bunnymark-update-loop.ts` times the update loop alone. It needs
+  no window, no raylib and no capability.
+- `benchmarks/import-binding-aliases.md` holds the fleet results.
 
-## What changed
+## Where the frame goes
 
-- **Runtime pin**: `metadata/gocciascript.json`, CI, `tests/linux/Dockerfile`,
-  npm scripts, the Node test harness and the DOOM Makefile target 0.14.0 and
-  `GocciaRunner` (`GOCCIA_LOADER` is now `GOCCIA_RUNNER`).
-- **Permissions**: `"unsafe-ffi"` is a hard error on 0.14.0. Both `goccia.json`
-  files use a `permissions` block. The DOOM config also requests read access to
-  `bindings/raylib.ts`, because that file is outside its project directory.
-  Unit and palette tests pass `--ignore-config-permissions`; native-call tests
-  and CI pass `-P`.
-- **Generator**: all 600 functions are bound (was 488). `TraceLog` and
-  `TextFormat` are variadic, the seven `*Raw` duplicates became
-  `FFI.nullable("utf8string")`, and `AudioStream.buffer` keeps its native name.
-  The declarations gained a branded `FFIAggregate`, `FFIAggregateMetadata`,
-  `FFIVarargs` and `GocciaFFI`.
-- **Examples**: Bunnymark uses `GenMeshPlane` and direct imports; DOOM scales
-  with `DrawTextureEx`. Frames are byte-identical before and after.
-- **Package entry point**: `package.json` has an `exports` map, so an installed
-  copy is imported as `@frostney/gocciascript-raylib`; every other packaged file
-  stays reachable by subpath.
-- **Tests**: `tests/types/consumer.ts` is compiled by `npm run test:types`;
-  `tests/fixtures/ffi-smoke.ts` covers mixed-float, variadic, nullable and
-  exact-field-name calls; CI and Docker now run `make test-palette`.
-- **Docs**: both READMEs, `SKIPPED.md`, and the new
-  `benchmarks/import-binding-aliases.md`.
+Measured on a Ryzen 9 6900HX with a Radeon RX 6600M, GocciaScript 0.14.0,
+10,000 sprites, 150 frames, by timing each phase of the frame loop in a
+scratch copy of `examples/lib/run-bunnymark.ts`:
 
-## Decisions made
+| Draw path | Update | Draw | Overlay | Present | Whole frame |
+|---|---:|---:|---:|---:|---:|
+| `DrawMeshInstanced` | 27.6 ms | 0.25 ms | 0.03 ms | 0.33 ms | 28.2 ms |
+| `DrawTextureV` | 30.3 ms | 72.4 ms | 0.04 ms | 0.43 ms | 103.2 ms |
 
-- `allow-ffi` stays unscoped: library discovery falls back to a bare loader
-  name and to `RAYLIB_LIBRARY_PATH`, which a path scope cannot describe.
-- `Goccia.gc()` every 10 frames stays in `examples/doom-gpl/run.ts`. Without it
-  the heap grows about 1.7 MB per frame until the memory ceiling forces a
-  collection; a `max-memory` setting was no faster than the explicit call.
-- The Node `.mjs` adapters stay: `GocciaRunner` has no host process or hashing
-  API.
-- `for...of` stays. On 0.14.0 a classic `for` is about 8 to 10% faster in the
-  isolated update loop, which does not change the whole-frame conclusion.
-- The package version stays `0.1.0`; the package is not on npm and the
-  repository has no tags.
-- The benchmark note keeps its software-rendered numbers for now. Johannes
-  wants numbers from several machines before it is updated.
+The instanced path is 98% update loop. The same machine's two GPUs give the
+same instanced frame rate, which confirms rendering is not the bound. The
+`DrawTextureV` path is 70% native calls.
 
-## Validation
+## Workstream A: the update loop in this repository
 
-Run on Linux x86-64 against the 0.14.0 release binaries, raylib at the pinned
-commit, and a private Xvfb with Mesa llvmpipe: `npm run generate`, `npm test`,
-`check:generated`, `test:types`, `test:abi`, `test:ffi`, `pack:check`, the five
-window smokes, `test:bunnymark:visual`, `make test-palette` and
-`make smoke GOCCIA_FLAGS=-P` all pass.
+`benchmarks/bunnymark-update-loop.ts` runs the current `updateBunnies` and a
+candidate, `updateHoisted`, and checks that both produce identical state.
 
-Not run locally: the macOS lane and the Docker build.
+```sh
+GocciaRunner --ignore-config-permissions benchmarks/bunnymark-update-loop.ts
+```
 
-A scratch consumer project that installed the packed tarball imported the
-bindings by name, by subpath, and as types under `tsc`.
+Three rounds on the Ryzen machine, 100 frames each:
 
-On the Radeon RX 6600M the instanced Bunnymark path spends about 27.6 ms of a
-28.2 ms frame in the JavaScript update loop at 10,000 sprites; drawing and
-presenting take under 1 ms. The `DrawTextureV` path spends about 72 ms per
-frame in its 10,000 native calls.
+| Variant | ms per frame |
+|---|---:|
+| Current | 28.13, 28.13, 28.09 |
+| Hoisted | 20.49, 20.49, 20.51 |
 
-## Open questions
+That is 27% less update time. The transforms, positions and velocities are
+identical after 100 frames.
 
-- Callback-taking raylib functions accept `FFI.callback(...).create(fn)` handles
-  at run time, but `FFIPointerInput` does not type them. This predates the
-  update.
+The candidate makes two changes, measured separately in a scratch file:
 
-## Next steps
-
-The instanced Bunnymark path is bound by the JavaScript update loop
-(`updateBunnies` in `examples/lib/bunny-state.ts`), not by rendering. Measured
-on boiler with GocciaScript 0.14.0, 10,000 sprites, headless and without
-raylib:
-
-| Variant of the update loop | ms per frame | Same positions |
+| Change | ms per frame | Opcodes removed per sprite |
 |---|---:|---|
-| Current | about 31 | yes |
-| Module constants hoisted into locals, bounds precomputed | about 23 | yes |
-| The same with a counted `for` loop (needs a compatibility flag) | about 20.5 | yes |
-| Positions kept only in the Float32 instance buffer | about 20 | no |
+| None | 28.1 | |
+| Module constants read into locals before the loop | 24.3 | 3 `OP_GET_GLOBAL` |
+| Edge tests compare against precomputed bounds | 26.5 | 4 `OP_ADD`, 3 `OP_LOAD_INT`, 1 `OP_SUB` |
+| Both (`updateHoisted`) | 20.5 | all of the above |
 
-The opcode profile of the current loop shows about 88 opcodes per sprite at
-roughly 36 ns each. `OP_GET_LOCAL` is 38% of them. Each sprite also costs three
-`OP_GET_GLOBAL` for module-level constants, six `OP_LOAD_HOLE`, and a
-finally-handler push and pop for `for...of`.
+**To do**
 
-1. Apply the hoisting variant here: about 25% less update time with identical
-   output and default syntax. Re-run `benchmarks/fleet-bunnymark.sh` with
-   `CURRENT_REF` set to the new revision.
-2. Take the opcode profile to GocciaScript. The release binaries are stripped
-   and `perf` is restricted on boiler, so native hot spots need a symbolized
-   build.
-3. The `DrawTextureV` path spends about 72 ms per frame in 10,000 native
-   calls, about 7 microseconds each including six struct field writes. That
-   is an FFI call-overhead question for GocciaScript.
+1. Move the body of `updateHoisted` into `updateBunnies` in
+   `examples/lib/bunny-state.ts`. `addBunnies` reads the same constants per
+   sprite and can take the same treatment, but it only runs when sprites are
+   added.
+2. Keep `tests/unit/bunny-state.test.ts` passing; it pins the edge-reversal
+   semantics. Note that the bottom edge test is `y + halfHeight - 40 < 0`.
+3. Run the gates in the README. `npm run test:bunnymark:visual` must still
+   report the direct and instanced frames as byte-identical.
+4. Measure end to end with `CURRENT_REF=<new revision>
+   benchmarks/fleet-bunnymark.sh`. Expected, not measured: the instanced frame
+   on the Ryzen machine falls from about 28 ms to about 21 ms, so from about
+   37 FPS to about 47 FPS.
+5. Remove `updateHoisted` from the benchmark file, or replace it with the
+   next candidate.
+
+**Measured but not recommended**
+
+| Variant | ms per frame | Why not |
+|---|---:|---|
+| Hoisted, with a counted `for` loop | about 20.5 | Needs `compat-traditional-for-loop`; the examples deliberately use default syntax. The hoisted `for...of` loop measured about 23 ms in the same run, so the gain is about 12%. |
+| Positions kept only in the Float32 instance buffer | about 20 | Motion becomes single precision, so positions differ from the current ones. |
+
+These two came from a scratch file that is not in the repository.
+
+## Workstream B: GocciaScript
+
+The profile below is from
+`GocciaRunner --ignore-config-permissions benchmarks/bunnymark-update-loop.ts
+--global BUNNYMARK_UPDATE_VARIANT=<variant> --profile=all
+--profile-output=profile.json`, divided by the 3,000,000 sprite updates in a
+run.
+
+| Opcode | Current, per sprite | Hoisted, per sprite |
+|---|---:|---:|
+| `OP_GET_LOCAL` | 33.51 | 34.51 |
+| `OP_MOVE` | 8.28 | 8.28 |
+| `OP_ADD` | 8.26 | 4.26 |
+| `OP_LOAD_HOLE` | 6.16 | 6.16 |
+| `OP_ARRAY_SET` | 4.14 | 4.14 |
+| `OP_ARRAY_GET` | 4.00 | 4.00 |
+| `OP_LOAD_INT` | 3.33 | 0.33 |
+| `OP_MUL` | 3.07 | 3.07 |
+| `OP_GET_GLOBAL` | 3.07 | 0.07 |
+| `OP_JUMP_IF_TRUE` | 3.01 | 3.01 |
+| `OP_JUMP_IF_FALSE` | 2.01 | 2.01 |
+| `OP_GT`, `OP_LT` | 2.00 each | 2.00 each |
+| `OP_ITER_NEXT`, `OP_JUMP`, `OP_PUSH_FINALLY_HANDLER`, `OP_POP_HANDLER` | 1.01 each | 1.01 each |
+| **Total** | **88.8** | **78.8** |
+
+The scalar fast path hit rate is 100% and the update function allocates about
+74 objects per call, so boxing and allocation are not the cost.
+
+What the numbers say:
+
+- **Average cost is about 30 ns per opcode.** 28.1 ms for 10,000 sprites at
+  88.8 opcodes each is 32 ns; the hoisted variant is 26 ns.
+- **`OP_GET_GLOBAL` costs about 125 ns.** Removing three per sprite saved
+  3.8 ms per frame. A module-level `const` read inside a function compiles to
+  this opcode; the three here are `bunnyInstanceStride`, `bunnyXOffset` and
+  `bunnyYOffset`, all numeric literals.
+- **Plain arithmetic costs about 20 ns per opcode.** Removing eight
+  arithmetic and load opcodes per sprite saved 1.6 ms per frame.
+- **`OP_GET_LOCAL` is 38 to 44% of all opcodes.** The loop body has 8
+  typed-array accesses and 11 to 16 arithmetic or compare operations, and it
+  executes 33 local reads plus 8 moves for them.
+- **Each iteration pays for `for...of` and block scoping.** Six
+  `OP_LOAD_HOLE` and one finally-handler push and pop per sprite.
+
+Candidates for the engine, as hypotheses from the opcode counts. None of them
+has been checked against the compiler or VM source:
+
+1. Resolve a module-level `const` with a literal initializer at compile time,
+   or bind it as an upvalue, instead of `OP_GET_GLOBAL`.
+2. Let arithmetic, compare and typed-array opcodes take local registers as
+   operands, so a local read does not need its own `OP_GET_LOCAL`.
+3. Skip the hole initialization for a loop-body `const` that cannot be read
+   before its initializer.
+4. Give `for...of` over an array a path without the finally handler when the
+   body cannot exit abnormally in a way that needs iterator close.
+
+The release binaries are stripped, and `perf` is restricted on the Ryzen
+machine (`perf_event_paranoid` is 4). Finding the native hot spots inside the
+dispatch loop needs a symbolized build from the GocciaScript repository.
+
+GocciaScript 0.14.0 already fused some of these patterns: its changelog lists
+"fuse less-than compares into OP_JUMP_IF_NOT_LT" (#1217) and "fuse increment,
+add-immediate, write IC, and local property reads" (#1215). This loop does not
+show `OP_JUMP_IF_NOT_LT`; its compares are `>` and `<` joined by `||`.
+
+## Workstream C: native call overhead
+
+The `DrawTextureV` path spends 72.4 ms per frame drawing 10,000 sprites, about
+7.2 microseconds per sprite. Per sprite the loop in
+`examples/lib/run-bunnymark.ts` does six typed-array reads, six writes to
+struct fields (`drawPosition.x`, `.y`, `drawColor.r`, `.g`, `.b`, `.a`), and
+one bound call taking a 20-byte `Texture`, a `Vector2` and a `Color` by value.
+
+How that splits between the field writes and the call itself was not measured.
+A benchmark that times the call alone, with the structs written once outside
+the loop, would separate them. This matters for any binding consumer that
+draws per object, not only for Bunnymark.
+
+## Constraints already decided
+
+- The examples use default GocciaScript syntax. `tests/unit/syntax.test.ts`
+  rejects `while` and classic `for` in them.
+- Bunnymark motion stays double precision, and the instanced and
+  `DrawTextureV` frames must stay byte-identical.
+- `benchmarks/import-binding-aliases.md` is the record of the fleet numbers.
+  Add new measurements; do not rewrite the existing rows.
+
+## Measuring across machines
+
+- `boiler` (the Ryzen machine) runs everything locally. Hardware rendering
+  needs the desktop session unlocked; `DRI_PRIME=1` selects the RX 6600M.
+  Ask Johannes before opening windows on his display.
+- `firepit` (Apple M5 Max) and `burnside` (Apple M1 Max) do not accept SSH.
+  They were driven through lantaarn; the lantaarn repository's
+  `.agent/HANDOFF.md` on `boiler` describes how.
+- The update-loop benchmark needs none of that. It runs anywhere GocciaRunner
+  0.14.0 runs.
+
+## Not verified
+
+- The end-to-end frame rate after the hoisting change.
+- Whether the same opcode costs hold on Apple silicon; the profile is from
+  x86-64 only.
+- Any of the four engine candidates against GocciaScript's source.
