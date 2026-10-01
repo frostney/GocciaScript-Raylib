@@ -1,5 +1,6 @@
 .cache/
-.agent/waits/
+# Session-local agent handoff and wait state; never committed.
+.agent/
 dist/
 node_modules/
 *.tgz
