@@ -77,4 +77,33 @@ describe("Bunnymark compact sprite state", () => {
     expect(state.transforms[bunnyXOffset]).toBe(-17);
     expect(state.transforms[bunnyYOffset]).toBe(19);
   });
+
+  test("reverses past an edge but not on it", () => {
+    const state = createBunnyState(2);
+    addBunnies(state, 2, 0, 0, () => 50);
+    state.x[0] = 1263;
+    state.y[0] = 703;
+    state.velocityX[0] = 1;
+    state.velocityY[0] = 1;
+    state.x[1] = -15;
+    state.y[1] = 25;
+    state.velocityX[1] = -1;
+    state.velocityY[1] = -1;
+
+    updateBunnies(state, 1, 32, 32, 1280, 720);
+
+    expect(Array.from(state.x)).toEqual([1264, -16]);
+    expect(Array.from(state.y)).toEqual([704, 24]);
+    expect(Array.from(state.velocityX)).toEqual([1, -1]);
+    expect(Array.from(state.velocityY)).toEqual([1, -1]);
+
+    updateBunnies(state, 1, 32, 32, 1280, 720);
+
+    expect(Array.from(state.x)).toEqual([1265, -17]);
+    expect(Array.from(state.y)).toEqual([705, 23]);
+    expect(Array.from(state.velocityX)).toEqual([-1, 1]);
+    expect(Array.from(state.velocityY)).toEqual([-1, 1]);
+    expect(state.transforms[bunnyInstanceStride + bunnyXOffset]).toBe(-17);
+    expect(state.transforms[bunnyInstanceStride + bunnyYOffset]).toBe(23);
+  });
 });

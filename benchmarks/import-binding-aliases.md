@@ -117,3 +117,63 @@ Both replacements were checked against the previous rendering:
   disabled, is byte-identical before and after on both the indexed-shader and
   RGBA display paths:
   `2fdda7ef7a9f42f95e17a33e5e955618af5afd6b19a282781316024893c506e0`.
+
+## Update-loop constants and bounds
+
+The fleet comparison left the instanced frame bound by `updateBunnies`, so a
+later revision changed that loop in two ways. The three
+module-level constants it read per sprite (`bunnyInstanceStride`,
+`bunnyXOffset`, `bunnyYOffset`) are copied into locals before the loop, and
+the four edge tests compare the position with bounds computed once per call
+instead of adding half the texture size per sprite.
+
+GocciaScript 0.14.0 compiles a module-level `const` read inside a function to
+`OP_GET_GLOBAL`. The opcode profile of the loop, per sprite:
+
+| Opcode | Tag `0.1.0` | Local constants and bounds |
+|---|---:|---:|
+| `OP_GET_LOCAL` | 33.51 | 34.51 |
+| `OP_ADD` | 8.26 | 4.26 |
+| `OP_LOAD_INT` | 3.33 | 0.33 |
+| `OP_GET_GLOBAL` | 3.07 | 0.07 |
+| `OP_SUB` | 1.05 | 0.05 |
+| All opcodes | 88.76 | 78.76 |
+
+The update loop alone, with no window and no raylib: 10,000 fixed-seed
+sprites, 100 frames per run, three interleaved runs on the Ryzen machine.
+
+| Update loop | Milliseconds per frame |
+|---|---|
+| Tag `0.1.0` | 27.21, 24.87, 24.83 (mean 25.64) |
+| Local constants and bounds | 19.12, 19.14, 19.00 (mean 19.09) |
+
+The whole frame, both revisions on GocciaScript 0.14.0 under Xvfb with
+llvmpipe: 10,000 fixed-seed sprites, uncapped, 100 frames per run after
+startup, three interleaved runs, in milliseconds per run.
+
+| Draw path | Tag `0.1.0` | Local constants and bounds | Change |
+|---|---|---|---:|
+| `DrawMeshInstanced` | 4201, 4165, 4168 (23.9 FPS) | 3557, 3575, 3575 (28.0 FPS) | +17.1% |
+| `DrawTextureV` | 10728, 10659, 10660 (9.4 FPS) | 10038, 10099, 10065 (9.9 FPS) | +6.1% |
+
+Both draw paths lose about 6 ms per frame, which is the saving measured in the
+loop alone. `benchmarks/fleet-bunnymark.sh` with `CURRENT_REF` set to the new
+revision reports 27.9 FPS instanced and 9.9 FPS for `DrawTextureV` on the same
+renderer, against 21.4 and 9.0 FPS for the 0.10.0 revision in that run. The
+hardware renderers and the two Macs have not been measured on the new
+revision.
+
+The motion is unchanged for the example's workload. The graphical integration
+test produces the same frame as before,
+`e22537b001590b497bad6c8da318d38339bef0fb4cdb95a8c8f449584e47d1a0`, and
+running both loops side by side over seven configurations of seed, frame
+time, texture size and screen size left every position, velocity and instance
+transform identical, across 297,401 edge reversals.
+
+The two forms of an edge test are not equal for every double.
+`y + 16 - 40 < 0` and `y < 24` disagree for the one double just below 24:
+there the sum rounds up to 40, so the previous loop did not reverse a sprite
+at that position and the new one does. The same tie exists at a far edge when
+the screen size is a power of two, such as 1024. With the example's 1280x720
+window and 32-pixel texture, the double below 24 is the only position where
+the two loops differ.
