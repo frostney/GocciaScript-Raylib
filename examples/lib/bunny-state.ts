@@ -82,13 +82,22 @@ export const updateBunnies = (
   screenWidth: number,
   screenHeight: number,
 ): void => {
-  const halfWidth = textureWidth / 2;
-  const halfHeight = textureHeight / 2;
+  // A sprite turns around once its centre leaves the screen. As in raylib's
+  // Bunnymark, the top edge sits 40 pixels down.
+  const minimumX = -textureWidth / 2;
+  const maximumX = screenWidth - textureWidth / 2;
+  const minimumY = 40 - textureHeight / 2;
+  const maximumY = screenHeight - textureHeight / 2;
   const xValues = state.x;
   const yValues = state.y;
   const velocityXValues = state.velocityX;
   const velocityYValues = state.velocityY;
   const transforms = state.transforms;
+  // A module-level constant read inside the loop is a global lookup per
+  // sprite, so the loop reads local copies.
+  const stride = bunnyInstanceStride;
+  const xOffset = bunnyXOffset;
+  const yOffset = bunnyYOffset;
 
   for (const index of state.indices) {
     const x = xValues[index] + velocityXValues[index] * deltaScale;
@@ -96,18 +105,11 @@ export const updateBunnies = (
 
     xValues[index] = x;
     yValues[index] = y;
-    if (x + halfWidth > screenWidth || x + halfWidth < 0) {
-      velocityXValues[index] *= -1;
-    }
-    if (
-      y + halfHeight > screenHeight ||
-      y + halfHeight - 40 < 0
-    ) {
-      velocityYValues[index] *= -1;
-    }
+    if (x > maximumX || x < minimumX) velocityXValues[index] *= -1;
+    if (y > maximumY || y < minimumY) velocityYValues[index] *= -1;
 
-    const transformOffset = index * bunnyInstanceStride;
-    transforms[transformOffset + bunnyXOffset] = x;
-    transforms[transformOffset + bunnyYOffset] = y;
+    const transformOffset = index * stride;
+    transforms[transformOffset + xOffset] = x;
+    transforms[transformOffset + yOffset] = y;
   }
 };
