@@ -1,8 +1,15 @@
 {
   "name": "@frostney/gocciascript-raylib",
   "version": "0.1.0",
-  "description": "Generated raylib 6.0 dynamic-library bindings for GocciaScript 0.10.0",
+  "description": "Generated raylib 6.0 dynamic-library bindings for GocciaScript 0.14.0",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./bindings/raylib.d.ts",
+      "default": "./bindings/raylib.ts"
+    },
+    "./*": "./*"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=24"
@@ -30,9 +37,9 @@
     "generate": "node scripts/normalize-api.mjs && node scripts/generate-bindings.mjs && node scripts/generate-abi.mjs",
     "check:generated": "node scripts/check-generated.mjs",
     "test": "npm run test:goccia:interpreter && npm run test:goccia:bytecode",
-    "test:goccia:interpreter": "\"${GOCCIA_TEST_RUNNER:-GocciaTestRunner}\" tests/unit",
-    "test:goccia:bytecode": "\"${GOCCIA_TEST_RUNNER:-GocciaTestRunner}\" tests/unit --mode=bytecode",
-    "test:types": "tsc --noEmit --strict --skipLibCheck false --lib ES2022 bindings/raylib.d.ts",
+    "test:goccia:interpreter": "\"${GOCCIA_TEST_RUNNER:-GocciaTestRunner}\" tests/unit --mode=interpreted --ignore-config-permissions",
+    "test:goccia:bytecode": "\"${GOCCIA_TEST_RUNNER:-GocciaTestRunner}\" tests/unit --mode=bytecode --ignore-config-permissions",
+    "test:types": "tsc --noEmit --strict --skipLibCheck false --lib ES2022 --module esnext --moduleResolution bundler --moduleSuffixes .d bindings/raylib.d.ts tests/types/consumer.ts",
     "test:abi": "node tests/integration/abi.test.mjs",
     "test:ffi": "node tests/integration/ffi.test.mjs",
     "test:bunnymark:visual": "node tests/integration/bunnymark-visual.test.mjs",

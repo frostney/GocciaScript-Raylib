@@ -3,9 +3,9 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, unlink } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { fromRoot } from "../../scripts/lib/project.mjs";
-import { findGocciaLoader } from "./helpers.mjs";
+import { acceptConfigPermissions, findGocciaRunner } from "./helpers.mjs";
 
-const loader = await findGocciaLoader();
+const runner = await findGocciaRunner();
 const cacheDirectory = fromRoot(".cache");
 const directPath = fromRoot(".cache/bunnymark-direct.png");
 const instancedPath = fromRoot(".cache/bunnymark-instanced.png");
@@ -20,11 +20,15 @@ for (const path of [directPath, instancedPath]) {
 }
 
 const runFixture = (fixture, expectedPath) => {
-  const result = spawnSync(loader, [fromRoot(fixture)], {
-    cwd: fromRoot(),
-    encoding: "utf8",
-    env: process.env,
-  });
+  const result = spawnSync(
+    runner,
+    [acceptConfigPermissions, fromRoot(fixture)],
+    {
+      cwd: fromRoot(),
+      encoding: "utf8",
+      env: process.env,
+    },
+  );
   assert.equal(
     result.status,
     0,

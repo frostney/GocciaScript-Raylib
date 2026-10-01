@@ -28,15 +28,22 @@ checkout explicitly excludes its bundled shareware WAD and music pack.
 
 Requirements:
 
-- GocciaScript 0.10.0
+- GocciaScript 0.14.0
 - raylib 6.0 as a dynamic library
 - Node.js, Git, Make, curl, shasum, and unzip
 
-From the repository root:
+This subproject's `goccia.json` requests the `ffi` capability and read access
+to the repository's `bindings/raylib.ts`, which lies outside the subproject.
+GocciaScript applies a config's requests once you have reviewed and trusted
+them. From the repository root:
 
 ```sh
+GocciaRunner --trust examples/doom-gpl/goccia.json
 make -C examples/doom-gpl run-freedoom
 ```
+
+Append `GOCCIA_FLAGS=-P` to any run target to accept the requests for that one
+run instead of storing trust.
 
 From this directory:
 
@@ -71,8 +78,8 @@ Those compatibility features are enabled only by this subproject's
 default syntax.
 
 On an Apple M1 Max with GocciaScript 0.10.0 bytecode, the first working
-320x200 build renders Freedoom E1M1 at roughly 3 FPS. This is a real engine
-port, but it is not yet a real-time port. Stable 0.10.0 spends most of its time
+320x200 build rendered Freedoom E1M1 at roughly 3 FPS. This is a real engine
+port, but it is not yet a real-time port. Stable 0.10.0 spent most of its time
 in the software renderer and indexed-to-RGBA pixel loops.
 
 Audio, menus, save files, and full Doom II parity are not wired into this first

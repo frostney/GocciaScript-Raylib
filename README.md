@@ -1,15 +1,15 @@
 # GocciaScript raylib
 
 Generated, ABI-checked [raylib 6.0](https://github.com/raysan5/raylib/releases/tag/6.0)
-bindings for [GocciaScript 0.10.0](https://github.com/frostney/GocciaScript/releases/tag/0.10.0).
+bindings for [GocciaScript 0.14.0](https://github.com/frostney/GocciaScript/releases/tag/0.14.0).
 The bindings load raylib as a dynamic library and keep unsafe FFI use explicit.
 
 ## What is included
 
-- deterministic TypeScript bindings and declarations generated from the pinned
-  official `raylib_api.json`;
+- deterministic TypeScript bindings and declarations for all 600 functions of
+  the pinned official `raylib_api.json`;
 - all 35 native struct layouts checked against `raylib.h`;
-- a machine-readable stable-runtime skip report;
+- a machine-readable skip report, currently empty;
 - macOS and Linux dynamic-library discovery;
 - typed basic-window, keyboard-input, embedded-image, Bunnymark, and playable
   raycasting examples, all with an on-screen FPS counter;
@@ -17,9 +17,10 @@ The bindings load raylib as a dynamic library and keep unsafe FFI use explicit.
   execute inside GocciaScript, with dynamic raylib used only for platform I/O;
 - package, generator, ABI, and representative native-call validation.
 
-GocciaScript reserves aggregate properties named `buffer` and `byteOffset`.
-raylib's `AudioStream.buffer` is therefore exposed as `nativeBuffer`; the
-generated `RAYLIB_FIELD_ALIASES` object records this sole 6.0 rename.
+Struct fields keep their exact native names. `AudioStream.buffer` is therefore
+raylib's pointer field rather than the aggregate's backing store, which
+`FFI.metadata(value)` returns as `buffer`, `byteOffset`, and `size` for every
+aggregate.
 
 `const char *` values and non-owned text returns use GocciaScript's UTF-8
 string descriptor. Mutable `char *` arguments and owned `char *` returns remain
@@ -27,24 +28,31 @@ raw pointers so callers can mutate them and return the exact allocation to
 `UnloadFileText`, `UnloadUTF8`, or `MemFree`. Pointer arguments accept native
 pointers, buffers, typed arrays, aggregates, and `null`.
 
-Stable FFI cannot express a parameter that accepts either a JavaScript string
-or a null pointer with one descriptor. `LoadShaderRaw`,
-`LoadShaderFromMemoryRaw`, and `LoadAutomationEventListRaw` are therefore
-generated as additional raw-pointer bindings for their documented nullable
-C-string parameters. The four text-replacement APIs likewise expose `Raw`
-variants for their nullable replacement argument. The normal exports remain
-convenient for non-null strings.
+The documented nullable C-string parameters of `LoadShader`,
+`LoadShaderFromMemory`, `LoadAutomationEventList`, and the four
+text-replacement APIs use `FFI.nullable("utf8string")`, so they accept a string
+or `null`.
 
-The official raylib 6.0 API describes 600 functions. Three are intentionally
-outside the 0.1 scope (`TraceLog`, `TextFormat`, and `DrawBillboardPro`).
-GocciaScript 0.10.0 also rejects functions that mix a top-level `f32` argument
-with other top-level argument types. Every other function is generated, and
-[SKIPPED.md](SKIPPED.md) records the exact stable-version boundary. No shim is
-presented as native coverage.
+`TraceLog` and `TextFormat` are bound as variadic functions. GocciaScript
+requires the C variadic tail as exactly one typed `FFI.varargs` argument, even
+when it is empty:
+
+```ts
+TextFormat("%s %03d", FFI.varargs(["utf8string", "i32"], ["raylib", 7]));
+TraceLog(LOG_INFO, "ready", FFI.varargs([], []));
+```
+
+GocciaScript ships no TypeScript declarations for its `FFI` global. Code that
+is type-checked against `bindings/raylib.d.ts` declares it with the exported
+`GocciaFFI` interface: `declare const FFI: GocciaFFI;`.
+
+The official raylib 6.0 API describes 600 functions and all 600 are generated.
+[SKIPPED.md](SKIPPED.md) remains the place where a future runtime or generator
+limit is recorded. No shim is presented as native coverage.
 
 ## Requirements
 
-- GocciaScript 0.10.0
+- GocciaScript 0.14.0
 - raylib 6.0 built as a shared/dynamic library
 - Node.js 24 or newer for host filesystem, hashing, compiler, and packaging
   orchestration
@@ -64,17 +72,56 @@ bindings when raylib lives elsewhere.
 
 ## Run an example
 
-The repository `goccia.json` opts into only the unsafe FFI extension. The
-examples are TypeScript, which GocciaScript parses as types-as-comments, and
+GocciaScript denies host access by default. The repository `goccia.json`
+requests only the `ffi` capability, and a config's request applies once you
+have reviewed and trusted it:
+
+```sh
+GocciaRunner --trust goccia.json
+```
+
+Pass `-P` instead to accept the request for a single run without storing
+trust.
+
+## Use from another project
+
+The package entry point is the generated bindings, so an installed copy is
+imported by name:
+
+```ts
+import { InitWindow, closeRaylib } from "@frostney/gocciascript-raylib";
+```
+
+GocciaScript resolves a package name only when the importing project grants
+`import` for `node_modules`, and it installs the `FFI` global only with the
+`ffi` grant. That project's own `goccia.json` therefore needs both, trusted
+or accepted with `-P` like the request above:
+
+```json
+{
+  "source-type": "module",
+  "permissions": {
+    "allow-ffi": true,
+    "allow-import": ["node_modules=."]
+  }
+}
+```
+
+Other files in the package, such as `SKIPPED.json`, stay importable by subpath.
+Bindings that are instead imported by relative path from outside the importing
+project need an `allow-read` grant for `bindings/raylib.ts`. Without the `ffi`
+grant the bindings throw a `TypeError` that names it.
+
+The examples are TypeScript, which GocciaScript parses as types-as-comments, and
 use `for...of`; neither the traditional-`for` nor `while` compatibility flag
 is required:
 
 ```sh
-GocciaScriptLoader examples/basic-window.ts
-GocciaScriptLoader examples/basic-input.ts
-GocciaScriptLoader examples/image-loading.ts
-GocciaScriptLoader examples/bunnymark.ts
-GocciaScriptLoader examples/doom-clone.ts
+GocciaRunner examples/basic-window.ts
+GocciaRunner examples/basic-input.ts
+GocciaRunner examples/image-loading.ts
+GocciaRunner examples/bunnymark.ts
+GocciaRunner examples/doom-clone.ts
 ```
 
 Bunnymark uses an immutable ESM byte import of the pinned `raybunny.png`; it
@@ -85,6 +132,7 @@ contains [an actual DOOM engine example](examples/doom-gpl/README.md) in the
 separately licensed `examples/doom-gpl/` subproject:
 
 ```sh
+GocciaRunner --trust examples/doom-gpl/goccia.json
 make -C examples/doom-gpl run IWAD=/absolute/path/to/doom.wad
 # Or download checksummed, freely redistributable Freedoom data:
 make -C examples/doom-gpl run-freedoom
@@ -98,8 +146,10 @@ upload, and FPS overlay. No proprietary IWAD is committed, and the entire GPL
 directory is excluded from the MIT npm tarball.
 
 The full engine legitimately uses classic `for`, `while`, and `do...while`
-loops. Their compatibility flags are scoped to `examples/doom-gpl/goccia.json`;
-the bindings and smaller MIT examples do not enable them. The initial
+loops. Their compatibility flags are scoped to `examples/doom-gpl/goccia.json`,
+which also requests `ffi` and read access to `bindings/raylib.ts`, because the
+bindings live outside the subproject's own directory. The bindings and smaller MIT
+examples do not enable those flags. The initial
 GocciaScript 0.10.0 implementation rendered at roughly 3 FPS on an Apple M1
 Max. The packed-palette fallback reaches 4.97 FPS, and presenting the indexed
 framebuffer through a palette-texture shader reaches 6.32 FPS in controlled
@@ -117,15 +167,21 @@ performance case for compatibility loops:
 | indexed `while` | 4.02 | 6.3692 s |
 
 The current `for...of` loop stays, and both legacy loop flags remain disabled.
-That loop experiment predates the application-side import aliases and the
-public-raylib instanced drawing path. With the import-binding fast path held
-constant, the 10,000-sprite workload now measures 30.35 FPS versus the
-12.99-FPS `DrawTextureV` baseline. The renderer uses `DrawMeshInstanced` and a
-custom shader through the generated bindings; it has no companion native
-library. [Loop methodology](benchmarks/bunnymark-loop-syntax.md),
+That loop experiment predates the public-raylib instanced drawing path. With
+GocciaScript's import-binding fast path held constant, the 10,000-sprite
+workload measured 30.35 FPS versus the 12.99-FPS `DrawTextureV` baseline. The
+renderer uses `DrawMeshInstanced` and a custom shader through the generated
+bindings; it has no companion native library.
+
+On GocciaScript 0.10.0 every read of an imported binding was slow enough that
+the example copied its imports into local constants. GocciaScript 0.11.0 and
+later retain resolved import bindings, so the example now calls its imports
+directly.
+[Loop methodology](benchmarks/bunnymark-loop-syntax.md),
 [the preceding application baseline](benchmarks/application-performance.md),
-and [the instancing validation](benchmarks/bunnymark-instancing.md) are
-recorded in the repository.
+[the instancing validation](benchmarks/bunnymark-instancing.md), and
+[the import-alias removal](benchmarks/import-binding-aliases.md) are recorded
+in the repository.
 
 ## Project scripts and tests
 
@@ -133,12 +189,11 @@ The pure API-repair and normalization core is GocciaScript-compatible
 TypeScript in `scripts/lib/api-core.ts`, and the unit suite runs in
 GocciaScript's own test runner in both interpreter and bytecode modes.
 
-The thin `.mjs` host adapters remain Node scripts because regeneration must
-read and write the real checkout, compute SHA-256 digests, invoke the C
-compiler, and inspect `npm pack`. Stable `GocciaScriptLoader` intentionally
-does not expose ambient host filesystem or process APIs; the sandbox runner
-uses a virtual filesystem whose writes are returned as a diff rather than
-materialized into the checkout.
+The thin `.mjs` host adapters remain Node scripts because regeneration and
+validation must compute SHA-256 digests, invoke the C compiler, and inspect
+`npm pack`. `GocciaRunner` exposes no host process or hashing API. Its sandbox
+mode can write regenerated files back to the checkout through `--copy-rw`, but
+that would move only the file I/O into GocciaScript, not those steps.
 
 ## Regenerate and validate
 
@@ -149,14 +204,20 @@ npm test
 npm run check:generated
 npm run test:types
 
-GOCCIA_LOADER=/path/to/GocciaScriptLoader npm run test:abi
-GOCCIA_LOADER=/path/to/GocciaScriptLoader npm run test:ffi
+GOCCIA_RUNNER=/path/to/GocciaRunner npm run test:abi
+GOCCIA_RUNNER=/path/to/GocciaRunner npm run test:ffi
 npm run pack:check
 ```
 
-`RAYLIB_INCLUDE_DIR` may point at a non-standard header directory for the ABI
-test. Regeneration verifies the pinned commit, checksums, repaired JSON defect,
-inventory, and output determinism before writing artifacts.
+`npm run test:types` checks the declarations and a small consumer program
+against them. `RAYLIB_INCLUDE_DIR` may point at a non-standard header directory
+for the ABI test. `GOCCIA_TEST_RUNNER` selects the `GocciaTestRunner` binary
+for `npm test` in the same way. The unit suite runs with
+`--ignore-config-permissions` because it needs no capability, and the
+native-call tests accept the config's `ffi` request for their own run, so
+neither depends on a trust store. Regeneration verifies the pinned commit,
+checksums, repaired JSON defect, inventory, and output determinism before
+writing artifacts.
 
 The Linux release lane can also be reproduced from macOS or Linux with:
 

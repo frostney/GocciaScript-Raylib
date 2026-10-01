@@ -2,20 +2,16 @@ import {
   BeginShaderMode,
   DrawMeshInstanced,
   EndShaderMode,
-  GenImageColor,
-  GenMeshHeightmap,
+  GenMeshPlane,
   IsShaderValid,
   LoadMaterialDefault,
   LoadShaderFromMemory,
   MATERIAL_MAP_DIFFUSE,
   SetMaterialTexture,
-  UnloadImage,
   UnloadMaterial,
   UnloadMesh,
   UnloadShader,
   UpdateMeshBuffer,
-  Vector3,
-  WHITE,
 } from "../../bindings/raylib.ts";
 
 const vertexShaderSource = `#version 330
@@ -42,24 +38,6 @@ void main() {
   finalColor = texture(texture0, fragTexCoord)*colDiffuse*fragColor;
 }`;
 
-const quadVertices = new Float32Array([
-  0, 0, 0,
-  0, 32, 0,
-  32, 32, 0,
-  0, 0, 0,
-  32, 32, 0,
-  32, 0, 0,
-]);
-
-const quadTexcoords = new Float32Array([
-  0, 0,
-  0, 1,
-  1, 1,
-  0, 0,
-  1, 1,
-  1, 0,
-]);
-
 export const createBunnyInstancing = (texture) => {
   const shader = LoadShaderFromMemory(
     vertexShaderSource,
@@ -70,16 +48,17 @@ export const createBunnyInstancing = (texture) => {
     return null;
   }
 
-  const meshImage = GenImageColor(2, 2, WHITE);
-  // GenMeshHeightmap supplies an uploaded 6-vertex mesh; both useful buffers
-  // are completely replaced below to form the sprite quad.
-  const mesh = GenMeshHeightmap(
-    meshImage,
-    Vector3.create({ x: texture.width, y: 0, z: texture.height }),
-  );
-  UnloadImage(meshImage);
+  // GenMeshPlane supplies an uploaded one-quad mesh centred on the XZ plane.
+  // Its texture coordinates already match the sprite; its positions move to
+  // the screen plane with the sprite origin at the top-left corner.
+  const mesh = GenMeshPlane(texture.width, texture.height, 1, 1);
+  const quadVertices = new Float32Array([
+    0, 0, 0,
+    texture.width, 0, 0,
+    0, texture.height, 0,
+    texture.width, texture.height, 0,
+  ]);
   UpdateMeshBuffer(mesh, 0, quadVertices, quadVertices.byteLength, 0);
-  UpdateMeshBuffer(mesh, 1, quadTexcoords, quadTexcoords.byteLength, 0);
 
   const material = LoadMaterialDefault();
   material.shader = shader;

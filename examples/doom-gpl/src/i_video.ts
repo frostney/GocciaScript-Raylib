@@ -3,15 +3,12 @@
 import {
   BLACK,
   BeginDrawing,
-  BeginMode2D,
   BeginShaderMode,
-  Camera2D,
   ClearBackground,
   CloseWindow,
   DrawFPS,
-  DrawTexture,
+  DrawTextureEx,
   EndDrawing,
-  EndMode2D,
   EndShaderMode,
   GenImageColor,
   GetShaderLocation,
@@ -76,12 +73,7 @@ void main() {
   vec2 paletteCoord = vec2((paletteIndex + 0.5)/256.0, 0.5);
   finalColor = texture(paletteTexture, paletteCoord)*colDiffuse*fragColor;
 }`;
-const camera = Camera2D.create({
-  offset: Vector2.create({ x: 0, y: 0 }),
-  target: Vector2.create({ x: 0, y: 0 }),
-  rotation: 0,
-  zoom: scale,
-});
+const origin = Vector2.create({ x: 0, y: 0 });
 
 let video = null;
 let playpal = null;
@@ -212,16 +204,14 @@ const I_FinishUpdate = (): void => {
 
   BeginDrawing();
   ClearBackground(BLACK);
-  BeginMode2D(camera);
   if (indexedShaderActive) {
     BeginShaderMode(shader);
     SetShaderValueTexture(shader, paletteLocation, paletteTexture);
-    DrawTexture(indexedTexture, 0, 0, WHITE);
+    DrawTextureEx(indexedTexture, origin, 0, scale, WHITE);
     EndShaderMode();
   } else {
-    DrawTexture(rgbaTexture, 0, 0, WHITE);
+    DrawTextureEx(rgbaTexture, origin, 0, scale, WHITE);
   }
-  EndMode2D();
   if (showFps) DrawFPS(8, 8);
   EndDrawing();
 };

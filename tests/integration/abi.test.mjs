@@ -5,13 +5,14 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fromRoot } from "../../scripts/lib/project.mjs";
 import {
-  findGocciaLoader,
+  acceptConfigPermissions,
+  findGocciaRunner,
   findRaylibInclude,
   parseLayoutLines,
 } from "./helpers.mjs";
 
-const [loader, includeDir] = await Promise.all([
-  findGocciaLoader(),
+const [runner, includeDir] = await Promise.all([
+  findGocciaRunner(),
   findRaylibInclude(),
 ]);
 const temporaryDirectory = await mkdtemp(join(tmpdir(), "goccia-raylib-abi-"));
@@ -41,11 +42,15 @@ assert.equal(
 const native = spawnSync(oracle, [], { encoding: "utf8" });
 assert.equal(native.status, 0, `Native ABI oracle failed:\n${native.stderr}`);
 
-const goccia = spawnSync(loader, [fromRoot("tests/abi/layout-probe.ts")], {
-  cwd: fromRoot(),
-  encoding: "utf8",
-  env: process.env,
-});
+const goccia = spawnSync(
+  runner,
+  [acceptConfigPermissions, fromRoot("tests/abi/layout-probe.ts")],
+  {
+    cwd: fromRoot(),
+    encoding: "utf8",
+    env: process.env,
+  },
+);
 assert.equal(
   goccia.status,
   0,

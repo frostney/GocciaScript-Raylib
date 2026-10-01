@@ -17,8 +17,12 @@ FREEDOOM_SHA256 := 3f9b264f3e3ce503b4fb7f6bdcb1f419d93c7b546f4df3e874dd878db9688
 FREEDOOM_WAD := $(CACHE_DIR)/freedoom-$(FREEDOOM_VERSION)/freedoom1.wad
 CACHED_IWAD := $(CACHE_DIR)/iwad.wad
 
-GOCCIA_LOADER ?= GocciaScriptLoader
+GOCCIA_RUNNER ?= GocciaRunner
 GOCCIA_TEST_RUNNER ?= GocciaTestRunner
+# goccia.json requests the ffi and read capabilities. Trust it once with
+# "GocciaRunner --trust examples/doom-gpl/goccia.json", or pass GOCCIA_FLAGS=-P
+# to accept the request for a single run.
+GOCCIA_FLAGS ?=
 GOCCIA_CONFIG := examples/doom-gpl/goccia.json
 
 .PHONY: all clean fetch freedoom prepare run run-freedoom smoke test-palette verify-source
@@ -75,20 +79,20 @@ run: prepare
 	fi
 	@test -s "$(IWAD)"
 	cp "$(IWAD)" "$(CACHED_IWAD)"
-	cd "$(PROJECT_ROOT)" && "$(GOCCIA_LOADER)" examples/doom-gpl/run.ts --config="$(GOCCIA_CONFIG)"
+	cd "$(PROJECT_ROOT)" && "$(GOCCIA_RUNNER)" $(GOCCIA_FLAGS) examples/doom-gpl/run.ts --config="$(GOCCIA_CONFIG)"
 
 run-freedoom: prepare freedoom
 	cp "$(FREEDOOM_WAD)" "$(CACHED_IWAD)"
-	cd "$(PROJECT_ROOT)" && "$(GOCCIA_LOADER)" examples/doom-gpl/run.ts --config="$(GOCCIA_CONFIG)"
+	cd "$(PROJECT_ROOT)" && "$(GOCCIA_RUNNER)" $(GOCCIA_FLAGS) examples/doom-gpl/run.ts --config="$(GOCCIA_CONFIG)"
 
 smoke: prepare freedoom
 	cp "$(FREEDOOM_WAD)" "$(CACHED_IWAD)"
-	cd "$(PROJECT_ROOT)" && "$(GOCCIA_LOADER)" examples/doom-gpl/smoke.ts --config="$(GOCCIA_CONFIG)"
+	cd "$(PROJECT_ROOT)" && "$(GOCCIA_RUNNER)" $(GOCCIA_FLAGS) examples/doom-gpl/smoke.ts --config="$(GOCCIA_CONFIG)"
 	@test -s "$(CACHE_DIR)/doom-goccia-smoke.png"
 
 test-palette:
-	cd "$(PROJECT_ROOT)" && "$(GOCCIA_TEST_RUNNER)" examples/doom-gpl/tests --config="$(GOCCIA_CONFIG)" --mode=interpreted
-	cd "$(PROJECT_ROOT)" && "$(GOCCIA_TEST_RUNNER)" examples/doom-gpl/tests --config="$(GOCCIA_CONFIG)" --mode=bytecode
+	cd "$(PROJECT_ROOT)" && "$(GOCCIA_TEST_RUNNER)" examples/doom-gpl/tests --config="$(GOCCIA_CONFIG)" --mode=interpreted --ignore-config-permissions
+	cd "$(PROJECT_ROOT)" && "$(GOCCIA_TEST_RUNNER)" examples/doom-gpl/tests --config="$(GOCCIA_CONFIG)" --mode=bytecode --ignore-config-permissions
 
 clean:
 	@if [ "$(CACHE_DIR)" = "$(CURDIR)/.cache" ]; then \
