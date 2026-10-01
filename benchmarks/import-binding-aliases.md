@@ -26,8 +26,8 @@ one process; the three runs agreed within 0.4%.
 
 Each iteration reads two imported bindings. Compared with a local read, one
 imported read cost about 9.3 microseconds more on 0.10.0 and costs about
-0.12 microseconds more on 0.14.0. GocciaScript 0.11.0 lists the change as "retain resolved import
-bindings".
+0.12 microseconds more on 0.14.0. GocciaScript 0.11.0 lists the change as
+"retain resolved import bindings".
 
 ## Bunnymark with and without aliases
 
