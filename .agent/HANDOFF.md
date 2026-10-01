@@ -4,14 +4,11 @@ Last updated: 2026-10-01
 
 ## Current task
 
-Land the fleet benchmark pull request (#12). The Bunnymark numbers for
-GocciaScript 0.10.0 versus 0.14.0 are collected for every machine and recorded
-in `benchmarks/import-binding-aliases.md`; nothing is left to measure.
+Nothing is in flight. The 0.14.0 update is merged (PR #11, merge commit
+`3eeab1f`) and tagged `0.1.0`. PR #12 adds `benchmarks/fleet-bunnymark.sh` and
+records the fleet results in `benchmarks/import-binding-aliases.md`.
 
-State: the 0.14.0 update is merged (PR #11, merge commit `3eeab1f`) and tagged
-`0.1.0`. PR #12 (branch `bench/fleet-bunnymark`) adds
-`benchmarks/fleet-bunnymark.sh`, which runs the comparison on one machine and
-prints a Markdown table, and records the fleet results.
+The next piece of work is Bunnymark performance; see "Next steps".
 
 Fleet results, 10,000 sprites, 100 frames, three interleaved runs:
 
@@ -96,5 +93,29 @@ frame in its 10,000 native calls.
 
 ## Next steps
 
-1. Merge the fleet benchmark pull request (#12).
-2. Optimise the Bunnymark update loop, which bounds the instanced path.
+The instanced Bunnymark path is bound by the JavaScript update loop
+(`updateBunnies` in `examples/lib/bunny-state.ts`), not by rendering. Measured
+on boiler with GocciaScript 0.14.0, 10,000 sprites, headless and without
+raylib:
+
+| Variant of the update loop | ms per frame | Same positions |
+|---|---:|---|
+| Current | about 31 | yes |
+| Module constants hoisted into locals, bounds precomputed | about 23 | yes |
+| The same with a counted `for` loop (needs a compatibility flag) | about 20.5 | yes |
+| Positions kept only in the Float32 instance buffer | about 20 | no |
+
+The opcode profile of the current loop shows about 88 opcodes per sprite at
+roughly 36 ns each. `OP_GET_LOCAL` is 38% of them. Each sprite also costs three
+`OP_GET_GLOBAL` for module-level constants, six `OP_LOAD_HOLE`, and a
+finally-handler push and pop for `for...of`.
+
+1. Apply the hoisting variant here: about 25% less update time with identical
+   output and default syntax. Re-run `benchmarks/fleet-bunnymark.sh` with
+   `CURRENT_REF` set to the new revision.
+2. Take the opcode profile to GocciaScript. The release binaries are stripped
+   and `perf` is restricted on boiler, so native hot spots need a symbolized
+   build.
+3. The `DrawTextureV` path spends about 72 ms per frame in 10,000 native
+   calls, about 7 microseconds each including six struct field writes. That
+   is an FFI call-overhead question for GocciaScript.
