@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { fromRoot } from "./lib/project.mjs";
+import { fromRoot, readJson } from "./lib/project.mjs";
 
 const result = spawnSync("npm", ["pack", "--dry-run", "--json"], {
   cwd: fromRoot(),
@@ -54,4 +54,16 @@ assert.ok(
   ![...files].some((path) => path.toLowerCase().endsWith(".wad")),
   "IWAD data must never ship in the npm package",
 );
+const { exports: entryPoints } = await readJson(fromRoot("package.json"));
+assert.deepEqual(
+  entryPoints["."],
+  { types: "./bindings/raylib.d.ts", default: "./bindings/raylib.ts" },
+  "The package entry point must be the generated bindings",
+);
+for (const target of Object.values(entryPoints["."])) {
+  assert.ok(
+    files.has(target.slice(2)),
+    `Package entry point ${target} is not in the tarball`,
+  );
+}
 console.log(`Package contents validated (${manifest.files.length} files).`);

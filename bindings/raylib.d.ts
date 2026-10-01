@@ -1,5 +1,8 @@
 // Generated from official raylib 6.0. Do not edit.
 
+// Only the declarations marked export are part of the module.
+export {};
+
 export interface FFIPointer {
   readonly address: number;
   readonly isNull: boolean;
@@ -31,29 +34,58 @@ export type FFIPointerInput =
   | ArrayBuffer
   | SharedArrayBuffer
   | FFITypedArray
-  | FFIAggregateValue
+  | FFIAggregate
   | null;
-export interface FFIAggregateValue {
+declare const ffiAggregate: unique symbol;
+/** Any GocciaScript FFI aggregate value. */
+export interface FFIAggregate {
+  readonly [ffiAggregate]: true;
+}
+/** Backing store of an aggregate, as returned by GocciaScript's `FFI.metadata(value)`. */
+export interface FFIAggregateMetadata {
   readonly buffer: ArrayBuffer;
   readonly byteOffset: number;
   readonly size: number;
 }
+/**
+ * Aggregate that also exposes its backing store directly. A native field named
+ * like a metadata property takes precedence; `FFI.metadata(value)` always works.
+ */
+export interface FFIAggregateValue extends FFIAggregate, FFIAggregateMetadata {}
 export interface FFIArrayValue<T> extends FFIAggregateValue {
   readonly length: number;
   [index: number]: T;
 }
-export interface FFIStructDescriptor<T extends FFIAggregateValue> {
+export interface FFIStructDescriptor<T extends FFIAggregate> {
   readonly kind: "struct";
   readonly size: number;
   readonly alignment: number;
   create(initializer?: Partial<T>): T;
+}
+declare const ffiVarargs: unique symbol;
+/** Typed variadic tail created by GocciaScript's `FFI.varargs(types, values)`. */
+export interface FFIVarargs {
+  readonly [ffiVarargs]: true;
+}
+/**
+ * The members of GocciaScript's `FFI` global that callers of these bindings
+ * use. GocciaScript ships no declarations, so type-checked code declares the
+ * global itself: `declare const FFI: GocciaFFI;`.
+ */
+export interface GocciaFFI {
+  varargs(types: readonly unknown[], values: readonly unknown[]): FFIVarargs;
+  metadata(value: FFIAggregate): FFIAggregateMetadata;
 }
 export interface FFILibrary {
   readonly path: string;
   readonly closed: boolean;
   bind(
     name: string,
-    signature: { args: readonly unknown[]; returns: unknown },
+    signature: {
+      args: readonly unknown[];
+      returns: unknown;
+      variadic?: boolean;
+    },
   ): (...args: unknown[]) => unknown;
   symbol(name: string): FFIPointer;
   close(): void;
@@ -63,9 +95,6 @@ export declare const RAYLIB_BINDING_INFO: {
   raylibCommit: "dbc56a87da87d973a9c5baa4e7438a9d20121d28";
   gocciaScriptVersion: string;
   linkage: "dynamic";
-};
-export declare const RAYLIB_FIELD_ALIASES: {
-  AudioStream: { buffer: "nativeBuffer" };
 };
 export declare const raylibLibrary: FFILibrary;
 export declare function closeRaylib(): void;
@@ -336,9 +365,9 @@ export interface WaveValue extends FFIAggregateValue {
 export declare const Wave: FFIStructDescriptor<WaveValue>;
 
 /** AudioStream, custom audio stream */
-export interface AudioStreamValue extends FFIAggregateValue {
-  /** Native C field: buffer. */
-  "nativeBuffer": FFIPointer;
+export interface AudioStreamValue extends FFIAggregate, Omit<FFIAggregateMetadata, "buffer"> {
+  /** Native C field; read the backing store with `FFI.metadata(value).buffer`. */
+  "buffer": FFIPointer;
   "processor": FFIPointer;
   "sampleRate": number;
   "sampleSize": number;
@@ -1374,16 +1403,10 @@ export declare function LoadVrStereoConfig(device: VrDeviceInfoValue): VrStereoC
 export declare function UnloadVrStereoConfig(config: VrStereoConfigValue): void;
 
 /** Load shader from files and bind default locations */
-export declare function LoadShader(vsFileName: string, fsFileName: string): ShaderValue;
-
-/** Raw-pointer variant for nullable C string parameters. */
-export declare function LoadShaderRaw(vsFileName: FFIPointerInput, fsFileName: FFIPointerInput): ShaderValue;
+export declare function LoadShader(vsFileName: string | null, fsFileName: string | null): ShaderValue;
 
 /** Load shader from code strings and bind default locations */
-export declare function LoadShaderFromMemory(vsCode: string, fsCode: string): ShaderValue;
-
-/** Raw-pointer variant for nullable C string parameters. */
-export declare function LoadShaderFromMemoryRaw(vsCode: FFIPointerInput, fsCode: FFIPointerInput): ShaderValue;
+export declare function LoadShaderFromMemory(vsCode: string | null, fsCode: string | null): ShaderValue;
 
 /** Check if a shader is valid (loaded on GPU) */
 export declare function IsShaderValid(shader: ShaderValue): boolean;
@@ -1477,6 +1500,9 @@ export declare function OpenURL(url: string): void;
 
 /** Set the current threshold (minimum) log level */
 export declare function SetTraceLogLevel(logLevel: number): void;
+
+/** Show trace log messages (LOG_DEBUG, LOG_INFO, LOG_WARNING, LOG_ERROR...) */
+export declare function TraceLog(logLevel: number, text: string, args: FFIVarargs): void;
 
 /** Set custom trace log */
 export declare function SetTraceLogCallback(callback: FFIPointerInput): void;
@@ -1638,10 +1664,7 @@ export declare function ComputeSHA1(data: FFIPointerInput, dataSize: number): FF
 export declare function ComputeSHA256(data: FFIPointerInput, dataSize: number): FFIPointer;
 
 /** Load automation events list from file, NULL for empty list, capacity = MAX_AUTOMATION_EVENTS */
-export declare function LoadAutomationEventList(fileName: string): AutomationEventListValue;
-
-/** Raw-pointer variant for nullable C string parameters. */
-export declare function LoadAutomationEventListRaw(fileName: FFIPointerInput): AutomationEventListValue;
+export declare function LoadAutomationEventList(fileName: string | null): AutomationEventListValue;
 
 /** Unload automation events list from file */
 export declare function UnloadAutomationEventList(list: AutomationEventListValue): void;
@@ -1720,6 +1743,9 @@ export declare function GetGamepadAxisMovement(gamepad: number, axis: number): n
 
 /** Set internal gamepad mappings (SDL_GameControllerDB) */
 export declare function SetGamepadMappings(mappings: string): number;
+
+/** Set gamepad vibration for both motors (duration in seconds) */
+export declare function SetGamepadVibration(gamepad: number, leftMotor: number, rightMotor: number, duration: number): void;
 
 /** Check if a mouse button has been pressed once */
 export declare function IsMouseButtonPressed(button: number): boolean;
@@ -1805,6 +1831,9 @@ export declare function GetGesturePinchAngle(): number;
 /** Update camera position for selected mode */
 export declare function UpdateCamera(camera: FFIPointerInput, mode: number): void;
 
+/** Update camera movement/rotation */
+export declare function UpdateCameraPro(camera: FFIPointerInput, movement: Vector3Value, rotation: Vector3Value, zoom: number): void;
+
 /** Set texture and rectangle to be used on shapes drawing */
 export declare function SetShapesTexture(texture: Texture2DValue, source: RectangleValue): void;
 
@@ -1826,11 +1855,56 @@ export declare function DrawLine(startPosX: number, startPosY: number, endPosX: 
 /** Draw a line (using gl lines) */
 export declare function DrawLineV(startPos: Vector2Value, endPos: Vector2Value, color: ColorValue): void;
 
+/** Draw a line (using triangles/quads) */
+export declare function DrawLineEx(startPos: Vector2Value, endPos: Vector2Value, thick: number, color: ColorValue): void;
+
 /** Draw lines sequence (using gl lines) */
 export declare function DrawLineStrip(points: FFIPointerInput, pointCount: number, color: ColorValue): void;
 
+/** Draw line segment cubic-bezier in-out interpolation */
+export declare function DrawLineBezier(startPos: Vector2Value, endPos: Vector2Value, thick: number, color: ColorValue): void;
+
 /** Draw a dashed line */
 export declare function DrawLineDashed(startPos: Vector2Value, endPos: Vector2Value, dashSize: number, spaceSize: number, color: ColorValue): void;
+
+/** Draw a color-filled circle */
+export declare function DrawCircle(centerX: number, centerY: number, radius: number, color: ColorValue): void;
+
+/** Draw a color-filled circle (Vector version) */
+export declare function DrawCircleV(center: Vector2Value, radius: number, color: ColorValue): void;
+
+/** Draw a gradient-filled circle */
+export declare function DrawCircleGradient(center: Vector2Value, radius: number, inner: ColorValue, outer: ColorValue): void;
+
+/** Draw a piece of a circle */
+export declare function DrawCircleSector(center: Vector2Value, radius: number, startAngle: number, endAngle: number, segments: number, color: ColorValue): void;
+
+/** Draw circle sector outline */
+export declare function DrawCircleSectorLines(center: Vector2Value, radius: number, startAngle: number, endAngle: number, segments: number, color: ColorValue): void;
+
+/** Draw circle outline */
+export declare function DrawCircleLines(centerX: number, centerY: number, radius: number, color: ColorValue): void;
+
+/** Draw circle outline (Vector version) */
+export declare function DrawCircleLinesV(center: Vector2Value, radius: number, color: ColorValue): void;
+
+/** Draw ellipse */
+export declare function DrawEllipse(centerX: number, centerY: number, radiusH: number, radiusV: number, color: ColorValue): void;
+
+/** Draw ellipse (Vector version) */
+export declare function DrawEllipseV(center: Vector2Value, radiusH: number, radiusV: number, color: ColorValue): void;
+
+/** Draw ellipse outline */
+export declare function DrawEllipseLines(centerX: number, centerY: number, radiusH: number, radiusV: number, color: ColorValue): void;
+
+/** Draw ellipse outline (Vector version) */
+export declare function DrawEllipseLinesV(center: Vector2Value, radiusH: number, radiusV: number, color: ColorValue): void;
+
+/** Draw ring */
+export declare function DrawRing(center: Vector2Value, innerRadius: number, outerRadius: number, startAngle: number, endAngle: number, segments: number, color: ColorValue): void;
+
+/** Draw ring outline */
+export declare function DrawRingLines(center: Vector2Value, innerRadius: number, outerRadius: number, startAngle: number, endAngle: number, segments: number, color: ColorValue): void;
 
 /** Draw a color-filled rectangle */
 export declare function DrawRectangle(posX: number, posY: number, width: number, height: number, color: ColorValue): void;
@@ -1840,6 +1914,9 @@ export declare function DrawRectangleV(position: Vector2Value, size: Vector2Valu
 
 /** Draw a color-filled rectangle */
 export declare function DrawRectangleRec(rec: RectangleValue, color: ColorValue): void;
+
+/** Draw a color-filled rectangle with pro parameters */
+export declare function DrawRectanglePro(rec: RectangleValue, origin: Vector2Value, rotation: number, color: ColorValue): void;
 
 /** Draw a vertical-gradient-filled rectangle */
 export declare function DrawRectangleGradientV(posX: number, posY: number, width: number, height: number, top: ColorValue, bottom: ColorValue): void;
@@ -1853,6 +1930,18 @@ export declare function DrawRectangleGradientEx(rec: RectangleValue, topLeft: Co
 /** Draw rectangle outline */
 export declare function DrawRectangleLines(posX: number, posY: number, width: number, height: number, color: ColorValue): void;
 
+/** Draw rectangle outline with extended parameters */
+export declare function DrawRectangleLinesEx(rec: RectangleValue, lineThick: number, color: ColorValue): void;
+
+/** Draw rectangle with rounded edges */
+export declare function DrawRectangleRounded(rec: RectangleValue, roundness: number, segments: number, color: ColorValue): void;
+
+/** Draw rectangle lines with rounded edges */
+export declare function DrawRectangleRoundedLines(rec: RectangleValue, roundness: number, segments: number, color: ColorValue): void;
+
+/** Draw rectangle with rounded edges outline */
+export declare function DrawRectangleRoundedLinesEx(rec: RectangleValue, roundness: number, segments: number, lineThick: number, color: ColorValue): void;
+
 /** Draw a color-filled triangle (vertex in counter-clockwise order!) */
 export declare function DrawTriangle(v1: Vector2Value, v2: Vector2Value, v3: Vector2Value, color: ColorValue): void;
 
@@ -1865,11 +1954,77 @@ export declare function DrawTriangleFan(points: FFIPointerInput, pointCount: num
 /** Draw a triangle strip defined by points */
 export declare function DrawTriangleStrip(points: FFIPointerInput, pointCount: number, color: ColorValue): void;
 
+/** Draw a regular polygon (Vector version) */
+export declare function DrawPoly(center: Vector2Value, sides: number, radius: number, rotation: number, color: ColorValue): void;
+
+/** Draw a polygon outline of n sides */
+export declare function DrawPolyLines(center: Vector2Value, sides: number, radius: number, rotation: number, color: ColorValue): void;
+
+/** Draw a polygon outline of n sides with extended parameters */
+export declare function DrawPolyLinesEx(center: Vector2Value, sides: number, radius: number, rotation: number, lineThick: number, color: ColorValue): void;
+
+/** Draw spline: Linear, minimum 2 points */
+export declare function DrawSplineLinear(points: FFIPointerInput, pointCount: number, thick: number, color: ColorValue): void;
+
+/** Draw spline: B-Spline, minimum 4 points */
+export declare function DrawSplineBasis(points: FFIPointerInput, pointCount: number, thick: number, color: ColorValue): void;
+
+/** Draw spline: Catmull-Rom, minimum 4 points */
+export declare function DrawSplineCatmullRom(points: FFIPointerInput, pointCount: number, thick: number, color: ColorValue): void;
+
+/** Draw spline: Quadratic Bezier, minimum 3 points (1 control point): [p1, c2, p3, c4...] */
+export declare function DrawSplineBezierQuadratic(points: FFIPointerInput, pointCount: number, thick: number, color: ColorValue): void;
+
+/** Draw spline: Cubic Bezier, minimum 4 points (2 control points): [p1, c2, c3, p4, c5, c6...] */
+export declare function DrawSplineBezierCubic(points: FFIPointerInput, pointCount: number, thick: number, color: ColorValue): void;
+
+/** Draw spline segment: Linear, 2 points */
+export declare function DrawSplineSegmentLinear(p1: Vector2Value, p2: Vector2Value, thick: number, color: ColorValue): void;
+
+/** Draw spline segment: B-Spline, 4 points */
+export declare function DrawSplineSegmentBasis(p1: Vector2Value, p2: Vector2Value, p3: Vector2Value, p4: Vector2Value, thick: number, color: ColorValue): void;
+
+/** Draw spline segment: Catmull-Rom, 4 points */
+export declare function DrawSplineSegmentCatmullRom(p1: Vector2Value, p2: Vector2Value, p3: Vector2Value, p4: Vector2Value, thick: number, color: ColorValue): void;
+
+/** Draw spline segment: Quadratic Bezier, 2 points, 1 control point */
+export declare function DrawSplineSegmentBezierQuadratic(p1: Vector2Value, c2: Vector2Value, p3: Vector2Value, thick: number, color: ColorValue): void;
+
+/** Draw spline segment: Cubic Bezier, 2 points, 2 control points */
+export declare function DrawSplineSegmentBezierCubic(p1: Vector2Value, c2: Vector2Value, c3: Vector2Value, p4: Vector2Value, thick: number, color: ColorValue): void;
+
+/** Get (evaluate) spline point: Linear */
+export declare function GetSplinePointLinear(startPos: Vector2Value, endPos: Vector2Value, t: number): Vector2Value;
+
+/** Get (evaluate) spline point: B-Spline */
+export declare function GetSplinePointBasis(p1: Vector2Value, p2: Vector2Value, p3: Vector2Value, p4: Vector2Value, t: number): Vector2Value;
+
+/** Get (evaluate) spline point: Catmull-Rom */
+export declare function GetSplinePointCatmullRom(p1: Vector2Value, p2: Vector2Value, p3: Vector2Value, p4: Vector2Value, t: number): Vector2Value;
+
+/** Get (evaluate) spline point: Quadratic Bezier */
+export declare function GetSplinePointBezierQuad(p1: Vector2Value, c2: Vector2Value, p3: Vector2Value, t: number): Vector2Value;
+
+/** Get (evaluate) spline point: Cubic Bezier */
+export declare function GetSplinePointBezierCubic(p1: Vector2Value, c2: Vector2Value, c3: Vector2Value, p4: Vector2Value, t: number): Vector2Value;
+
 /** Check collision between two rectangles */
 export declare function CheckCollisionRecs(rec1: RectangleValue, rec2: RectangleValue): boolean;
 
+/** Check collision between two circles */
+export declare function CheckCollisionCircles(center1: Vector2Value, radius1: number, center2: Vector2Value, radius2: number): boolean;
+
+/** Check collision between circle and rectangle */
+export declare function CheckCollisionCircleRec(center: Vector2Value, radius: number, rec: RectangleValue): boolean;
+
+/** Check if circle collides with a line created betweeen two points [p1] and [p2] */
+export declare function CheckCollisionCircleLine(center: Vector2Value, radius: number, p1: Vector2Value, p2: Vector2Value): boolean;
+
 /** Check if point is inside rectangle */
 export declare function CheckCollisionPointRec(point: Vector2Value, rec: RectangleValue): boolean;
+
+/** Check if point is inside circle */
+export declare function CheckCollisionPointCircle(point: Vector2Value, center: Vector2Value, radius: number): boolean;
 
 /** Check if point is inside a triangle */
 export declare function CheckCollisionPointTriangle(point: Vector2Value, p1: Vector2Value, p2: Vector2Value, p3: Vector2Value): boolean;
@@ -1928,8 +2083,20 @@ export declare function GenImageColor(width: number, height: number, color: Colo
 /** Generate image: linear gradient, direction in degrees [0..360], 0=Vertical gradient */
 export declare function GenImageGradientLinear(width: number, height: number, direction: number, start: ColorValue, end: ColorValue): ImageValue;
 
+/** Generate image: radial gradient */
+export declare function GenImageGradientRadial(width: number, height: number, density: number, inner: ColorValue, outer: ColorValue): ImageValue;
+
+/** Generate image: square gradient */
+export declare function GenImageGradientSquare(width: number, height: number, density: number, inner: ColorValue, outer: ColorValue): ImageValue;
+
 /** Generate image: checked */
 export declare function GenImageChecked(width: number, height: number, checksX: number, checksY: number, col1: ColorValue, col2: ColorValue): ImageValue;
+
+/** Generate image: white noise */
+export declare function GenImageWhiteNoise(width: number, height: number, factor: number): ImageValue;
+
+/** Generate image: perlin noise */
+export declare function GenImagePerlinNoise(width: number, height: number, offsetX: number, offsetY: number, scale: number): ImageValue;
 
 /** Generate image: cellular algorithm, bigger tileSize means bigger cells */
 export declare function GenImageCellular(width: number, height: number, tileSize: number): ImageValue;
@@ -1949,6 +2116,9 @@ export declare function ImageFromChannel(image: ImageValue, selectedChannel: num
 /** Create an image from text (default font) */
 export declare function ImageText(text: string, fontSize: number, color: ColorValue): ImageValue;
 
+/** Create an image from text (custom sprite font) */
+export declare function ImageTextEx(font: FontValue, text: string, fontSize: number, spacing: number, tint: ColorValue): ImageValue;
+
 /** Convert image data to desired format */
 export declare function ImageFormat(image: FFIPointerInput, newFormat: number): void;
 
@@ -1957,6 +2127,12 @@ export declare function ImageToPOT(image: FFIPointerInput, fill: ColorValue): vo
 
 /** Crop an image to a defined rectangle */
 export declare function ImageCrop(image: FFIPointerInput, crop: RectangleValue): void;
+
+/** Crop image depending on alpha value */
+export declare function ImageAlphaCrop(image: FFIPointerInput, threshold: number): void;
+
+/** Clear alpha channel to desired color */
+export declare function ImageAlphaClear(image: FFIPointerInput, color: ColorValue, threshold: number): void;
 
 /** Apply alpha mask to image */
 export declare function ImageAlphaMask(image: FFIPointerInput, alphaMask: ImageValue): void;
@@ -2009,6 +2185,9 @@ export declare function ImageColorInvert(image: FFIPointerInput): void;
 /** Modify image color: grayscale */
 export declare function ImageColorGrayscale(image: FFIPointerInput): void;
 
+/** Modify image color: contrast (-100 to 100) */
+export declare function ImageColorContrast(image: FFIPointerInput, contrast: number): void;
+
 /** Modify image color: brightness (-255 to 255) */
 export declare function ImageColorBrightness(image: FFIPointerInput, brightness: number): void;
 
@@ -2026,6 +2205,9 @@ export declare function UnloadImageColors(colors: FFIPointerInput): void;
 
 /** Unload colors palette loaded with LoadImagePalette() */
 export declare function UnloadImagePalette(colors: FFIPointerInput): void;
+
+/** Get image alpha border rectangle */
+export declare function GetImageAlphaBorder(image: ImageValue, threshold: number): RectangleValue;
 
 /** Get image pixel color at (x, y) position */
 export declare function GetImageColor(image: ImageValue, x: number, y: number): ColorValue;
@@ -2093,6 +2275,9 @@ export declare function ImageDraw(dst: FFIPointerInput, src: ImageValue, srcRec:
 /** Draw text (using default font) within an image (destination) */
 export declare function ImageDrawText(dst: FFIPointerInput, text: string, posX: number, posY: number, fontSize: number, color: ColorValue): void;
 
+/** Draw text (custom sprite font) within an image (destination) */
+export declare function ImageDrawTextEx(dst: FFIPointerInput, font: FontValue, text: string, position: Vector2Value, fontSize: number, spacing: number, tint: ColorValue): void;
+
 /** Load texture from file into GPU memory (VRAM) */
 export declare function LoadTexture(fileName: string): Texture2DValue;
 
@@ -2138,11 +2323,23 @@ export declare function DrawTexture(texture: Texture2DValue, posX: number, posY:
 /** Draw a Texture2D with position defined as Vector2 */
 export declare function DrawTextureV(texture: Texture2DValue, position: Vector2Value, tint: ColorValue): void;
 
+/** Draw a Texture2D with extended parameters */
+export declare function DrawTextureEx(texture: Texture2DValue, position: Vector2Value, rotation: number, scale: number, tint: ColorValue): void;
+
 /** Draw a part of a texture defined by a rectangle */
 export declare function DrawTextureRec(texture: Texture2DValue, source: RectangleValue, position: Vector2Value, tint: ColorValue): void;
 
+/** Draw a part of a texture defined by a rectangle with 'pro' parameters */
+export declare function DrawTexturePro(texture: Texture2DValue, source: RectangleValue, dest: RectangleValue, origin: Vector2Value, rotation: number, tint: ColorValue): void;
+
+/** Draws a texture (or part of it) that stretches or shrinks nicely */
+export declare function DrawTextureNPatch(texture: Texture2DValue, nPatchInfo: NPatchInfoValue, dest: RectangleValue, origin: Vector2Value, rotation: number, tint: ColorValue): void;
+
 /** Check if two colors are equal */
 export declare function ColorIsEqual(col1: ColorValue, col2: ColorValue): boolean;
+
+/** Get color with alpha applied, alpha goes from 0.0f to 1.0f */
+export declare function Fade(color: ColorValue, alpha: number): ColorValue;
 
 /** Get hexadecimal value for a Color (0xRRGGBBAA) */
 export declare function ColorToInt(color: ColorValue): number;
@@ -2162,8 +2359,20 @@ export declare function ColorFromHSV(hue: number, saturation: number, value: num
 /** Get color multiplied with another color */
 export declare function ColorTint(color: ColorValue, tint: ColorValue): ColorValue;
 
+/** Get color with brightness correction, brightness factor goes from -1.0f to 1.0f */
+export declare function ColorBrightness(color: ColorValue, factor: number): ColorValue;
+
+/** Get color with contrast correction, contrast values between -1.0f and 1.0f */
+export declare function ColorContrast(color: ColorValue, contrast: number): ColorValue;
+
+/** Get color with alpha applied, alpha goes from 0.0f to 1.0f */
+export declare function ColorAlpha(color: ColorValue, alpha: number): ColorValue;
+
 /** Get src alpha-blended into dst color with tint */
 export declare function ColorAlphaBlend(dst: ColorValue, src: ColorValue, tint: ColorValue): ColorValue;
+
+/** Get color lerp interpolation between two colors, factor [0.0f..1.0f] */
+export declare function ColorLerp(color1: ColorValue, color2: ColorValue, factor: number): ColorValue;
 
 /** Get Color structure from hexadecimal value */
 export declare function GetColor(hexValue: number): ColorValue;
@@ -2216,11 +2425,29 @@ export declare function DrawFPS(posX: number, posY: number): void;
 /** Draw text (using default font) */
 export declare function DrawText(text: string, posX: number, posY: number, fontSize: number, color: ColorValue): void;
 
+/** Draw text using font and additional parameters */
+export declare function DrawTextEx(font: FontValue, text: string, position: Vector2Value, fontSize: number, spacing: number, tint: ColorValue): void;
+
+/** Draw text using Font and pro parameters (rotation) */
+export declare function DrawTextPro(font: FontValue, text: string, position: Vector2Value, origin: Vector2Value, rotation: number, fontSize: number, spacing: number, tint: ColorValue): void;
+
+/** Draw one character (codepoint) */
+export declare function DrawTextCodepoint(font: FontValue, codepoint: number, position: Vector2Value, fontSize: number, tint: ColorValue): void;
+
+/** Draw multiple character (codepoint) */
+export declare function DrawTextCodepoints(font: FontValue, codepoints: FFIPointerInput, codepointCount: number, position: Vector2Value, fontSize: number, spacing: number, tint: ColorValue): void;
+
 /** Set vertical line spacing when drawing with line-breaks */
 export declare function SetTextLineSpacing(spacing: number): void;
 
 /** Measure string width for default font */
 export declare function MeasureText(text: string, fontSize: number): number;
+
+/** Measure string size for Font */
+export declare function MeasureTextEx(font: FontValue, text: string, fontSize: number, spacing: number): Vector2Value;
+
+/** Measure string size for an existing array of codepoints for Font */
+export declare function MeasureTextCodepoints(font: FontValue, codepoints: FFIPointerInput, length: number, fontSize: number, spacing: number): Vector2Value;
 
 /** Get glyph index position in font for a codepoint (unicode character), fallback to '?' if not found */
 export declare function GetGlyphIndex(font: FontValue, codepoint: number): number;
@@ -2273,6 +2500,9 @@ export declare function TextIsEqual(text1: string, text2: string): boolean;
 /** Get text length, checks for '\0' ending */
 export declare function TextLength(text: string): number;
 
+/** Text formatting with variables (sprintf() style) */
+export declare function TextFormat(text: string, args: FFIVarargs): string;
+
 /** Get a piece of a text string */
 export declare function TextSubtext(text: string, position: number, length: number): string;
 
@@ -2283,28 +2513,16 @@ export declare function TextRemoveSpaces(text: string): string;
 export declare function GetTextBetween(text: string, begin: string, end: string): string;
 
 /** Replace text string with new string */
-export declare function TextReplace(text: string, search: string, replacement: string): string;
-
-/** Raw-pointer variant for nullable C string parameters. */
-export declare function TextReplaceRaw(text: string, search: string, replacement: FFIPointerInput): string;
+export declare function TextReplace(text: string, search: string, replacement: string | null): string;
 
 /** Replace text string with new string, memory must be MemFree() */
-export declare function TextReplaceAlloc(text: string, search: string, replacement: string): FFIPointer;
-
-/** Raw-pointer variant for nullable C string parameters. */
-export declare function TextReplaceAllocRaw(text: string, search: string, replacement: FFIPointerInput): FFIPointer;
+export declare function TextReplaceAlloc(text: string, search: string, replacement: string | null): FFIPointer;
 
 /** Replace text between two specific strings */
-export declare function TextReplaceBetween(text: string, begin: string, end: string, replacement: string): string;
-
-/** Raw-pointer variant for nullable C string parameters. */
-export declare function TextReplaceBetweenRaw(text: string, begin: string, end: string, replacement: FFIPointerInput): string;
+export declare function TextReplaceBetween(text: string, begin: string, end: string, replacement: string | null): string;
 
 /** Replace text between two specific strings, memory must be MemFree() */
-export declare function TextReplaceBetweenAlloc(text: string, begin: string, end: string, replacement: string): FFIPointer;
-
-/** Raw-pointer variant for nullable C string parameters. */
-export declare function TextReplaceBetweenAllocRaw(text: string, begin: string, end: string, replacement: FFIPointerInput): FFIPointer;
+export declare function TextReplaceBetweenAlloc(text: string, begin: string, end: string, replacement: string | null): FFIPointer;
 
 /** Insert text in a defined byte position */
 export declare function TextInsert(text: string, insert: string, position: number): string;
@@ -2351,23 +2569,62 @@ export declare function DrawLine3D(startPos: Vector3Value, endPos: Vector3Value,
 /** Draw a point in 3D space, actually a small line */
 export declare function DrawPoint3D(position: Vector3Value, color: ColorValue): void;
 
+/** Draw a circle in 3D world space */
+export declare function DrawCircle3D(center: Vector3Value, radius: number, rotationAxis: Vector3Value, rotationAngle: number, color: ColorValue): void;
+
 /** Draw a color-filled triangle (vertex in counter-clockwise order!) */
 export declare function DrawTriangle3D(v1: Vector3Value, v2: Vector3Value, v3: Vector3Value, color: ColorValue): void;
 
 /** Draw a triangle strip defined by points */
 export declare function DrawTriangleStrip3D(points: FFIPointerInput, pointCount: number, color: ColorValue): void;
 
+/** Draw cube */
+export declare function DrawCube(position: Vector3Value, width: number, height: number, length: number, color: ColorValue): void;
+
 /** Draw cube (Vector version) */
 export declare function DrawCubeV(position: Vector3Value, size: Vector3Value, color: ColorValue): void;
 
+/** Draw cube wires */
+export declare function DrawCubeWires(position: Vector3Value, width: number, height: number, length: number, color: ColorValue): void;
+
 /** Draw cube wires (Vector version) */
 export declare function DrawCubeWiresV(position: Vector3Value, size: Vector3Value, color: ColorValue): void;
+
+/** Draw sphere */
+export declare function DrawSphere(centerPos: Vector3Value, radius: number, color: ColorValue): void;
+
+/** Draw sphere with extended parameters */
+export declare function DrawSphereEx(centerPos: Vector3Value, radius: number, rings: number, slices: number, color: ColorValue): void;
+
+/** Draw sphere wires */
+export declare function DrawSphereWires(centerPos: Vector3Value, radius: number, rings: number, slices: number, color: ColorValue): void;
+
+/** Draw a cylinder/cone */
+export declare function DrawCylinder(position: Vector3Value, radiusTop: number, radiusBottom: number, height: number, slices: number, color: ColorValue): void;
+
+/** Draw a cylinder with base at startPos and top at endPos */
+export declare function DrawCylinderEx(startPos: Vector3Value, endPos: Vector3Value, startRadius: number, endRadius: number, sides: number, color: ColorValue): void;
+
+/** Draw a cylinder/cone wires */
+export declare function DrawCylinderWires(position: Vector3Value, radiusTop: number, radiusBottom: number, height: number, slices: number, color: ColorValue): void;
+
+/** Draw a cylinder wires with base at startPos and top at endPos */
+export declare function DrawCylinderWiresEx(startPos: Vector3Value, endPos: Vector3Value, startRadius: number, endRadius: number, sides: number, color: ColorValue): void;
+
+/** Draw a capsule with the center of its sphere caps at startPos and endPos */
+export declare function DrawCapsule(startPos: Vector3Value, endPos: Vector3Value, radius: number, slices: number, rings: number, color: ColorValue): void;
+
+/** Draw capsule wireframe with the center of its sphere caps at startPos and endPos */
+export declare function DrawCapsuleWires(startPos: Vector3Value, endPos: Vector3Value, radius: number, slices: number, rings: number, color: ColorValue): void;
 
 /** Draw a plane XZ */
 export declare function DrawPlane(centerPos: Vector3Value, size: Vector2Value, color: ColorValue): void;
 
 /** Draw a ray line */
 export declare function DrawRay(ray: RayValue, color: ColorValue): void;
+
+/** Draw a grid (centered at (0, 0, 0)) */
+export declare function DrawGrid(slices: number, spacing: number): void;
 
 /** Load model from files (meshes and materials) */
 export declare function LoadModel(fileName: string): ModelValue;
@@ -2384,11 +2641,29 @@ export declare function UnloadModel(model: ModelValue): void;
 /** Compute model bounding box limits (considers all meshes) */
 export declare function GetModelBoundingBox(model: ModelValue): BoundingBoxValue;
 
+/** Draw a model (with texture if set) */
+export declare function DrawModel(model: ModelValue, position: Vector3Value, scale: number, tint: ColorValue): void;
+
+/** Draw a model with extended parameters */
+export declare function DrawModelEx(model: ModelValue, position: Vector3Value, rotationAxis: Vector3Value, rotationAngle: number, scale: Vector3Value, tint: ColorValue): void;
+
+/** Draw a model wires (with texture if set) */
+export declare function DrawModelWires(model: ModelValue, position: Vector3Value, scale: number, tint: ColorValue): void;
+
+/** Draw a model wires (with texture if set) with extended parameters */
+export declare function DrawModelWiresEx(model: ModelValue, position: Vector3Value, rotationAxis: Vector3Value, rotationAngle: number, scale: Vector3Value, tint: ColorValue): void;
+
 /** Draw bounding box (wires) */
 export declare function DrawBoundingBox(box: BoundingBoxValue, color: ColorValue): void;
 
+/** Draw a billboard texture */
+export declare function DrawBillboard(camera: CameraValue, texture: Texture2DValue, position: Vector3Value, scale: number, tint: ColorValue): void;
+
 /** Draw a billboard texture defined by source */
 export declare function DrawBillboardRec(camera: CameraValue, texture: Texture2DValue, source: RectangleValue, position: Vector3Value, size: Vector2Value, tint: ColorValue): void;
+
+/** Draw a billboard texture defined by source and rotation */
+export declare function DrawBillboardPro(camera: CameraValue, texture: Texture2DValue, source: RectangleValue, position: Vector3Value, up: Vector3Value, size: Vector2Value, origin: Vector2Value, rotation: number, tint: ColorValue): void;
 
 /** Upload mesh vertex data in GPU and provide VAO/VBO ids */
 export declare function UploadMesh(mesh: FFIPointerInput, dynamic: boolean): void;
@@ -2417,8 +2692,32 @@ export declare function ExportMesh(mesh: MeshValue, fileName: string): boolean;
 /** Export mesh as code file (.h) defining multiple arrays of vertex attributes */
 export declare function ExportMeshAsCode(mesh: MeshValue, fileName: string): boolean;
 
+/** Generate polygonal mesh */
+export declare function GenMeshPoly(sides: number, radius: number): MeshValue;
+
+/** Generate plane mesh (with subdivisions) */
+export declare function GenMeshPlane(width: number, length: number, resX: number, resZ: number): MeshValue;
+
 /** Generate cuboid mesh */
 export declare function GenMeshCube(width: number, height: number, length: number): MeshValue;
+
+/** Generate sphere mesh (standard sphere) */
+export declare function GenMeshSphere(radius: number, rings: number, slices: number): MeshValue;
+
+/** Generate half-sphere mesh (no bottom cap) */
+export declare function GenMeshHemiSphere(radius: number, rings: number, slices: number): MeshValue;
+
+/** Generate cylinder mesh */
+export declare function GenMeshCylinder(radius: number, height: number, slices: number): MeshValue;
+
+/** Generate cone/pyramid mesh */
+export declare function GenMeshCone(radius: number, height: number, slices: number): MeshValue;
+
+/** Generate torus mesh */
+export declare function GenMeshTorus(radius: number, size: number, radSeg: number, sides: number): MeshValue;
+
+/** Generate trefoil knot mesh */
+export declare function GenMeshKnot(radius: number, size: number, radSeg: number, sides: number): MeshValue;
 
 /** Generate heightmap mesh from image data */
 export declare function GenMeshHeightmap(heightmap: ImageValue, size: Vector3Value): MeshValue;
@@ -2447,14 +2746,29 @@ export declare function SetModelMeshMaterial(model: FFIPointerInput, meshId: num
 /** Load model animations from file */
 export declare function LoadModelAnimations(fileName: string, animCount: FFIPointerInput): FFIPointer;
 
+/** Update model animation pose (vertex buffers and bone matrices) */
+export declare function UpdateModelAnimation(model: ModelValue, anim: ModelAnimationValue, frame: number): void;
+
+/** Update model animation pose, blending two animations */
+export declare function UpdateModelAnimationEx(model: ModelValue, animA: ModelAnimationValue, frameA: number, animB: ModelAnimationValue, frameB: number, blend: number): void;
+
 /** Unload animation array data */
 export declare function UnloadModelAnimations(animations: FFIPointerInput, animCount: number): void;
 
 /** Check model animation skeleton match */
 export declare function IsModelAnimationValid(model: ModelValue, anim: ModelAnimationValue): boolean;
 
+/** Check collision between two spheres */
+export declare function CheckCollisionSpheres(center1: Vector3Value, radius1: number, center2: Vector3Value, radius2: number): boolean;
+
 /** Check collision between two bounding boxes */
 export declare function CheckCollisionBoxes(box1: BoundingBoxValue, box2: BoundingBoxValue): boolean;
+
+/** Check collision between box and sphere */
+export declare function CheckCollisionBoxSphere(box: BoundingBoxValue, center: Vector3Value, radius: number): boolean;
+
+/** Get collision info between ray and sphere */
+export declare function GetRayCollisionSphere(ray: RayValue, center: Vector3Value, radius: number): RayCollisionValue;
 
 /** Get collision info between ray and box */
 export declare function GetRayCollisionBox(ray: RayValue, box: BoundingBoxValue): RayCollisionValue;
@@ -2537,6 +2851,15 @@ export declare function ResumeSound(sound: SoundValue): void;
 /** Check if a sound is currently playing */
 export declare function IsSoundPlaying(sound: SoundValue): boolean;
 
+/** Set volume for a sound (1.0 is max level) */
+export declare function SetSoundVolume(sound: SoundValue, volume: number): void;
+
+/** Set pitch for a sound (1.0 is base level) */
+export declare function SetSoundPitch(sound: SoundValue, pitch: number): void;
+
+/** Set pan for a sound (-1.0 left, 0.0 center, 1.0 right) */
+export declare function SetSoundPan(sound: SoundValue, pan: number): void;
+
 /** Copy a wave to a new wave */
 export declare function WaveCopy(wave: WaveValue): WaveValue;
 
@@ -2582,6 +2905,18 @@ export declare function PauseMusicStream(music: MusicValue): void;
 /** Resume playing paused music */
 export declare function ResumeMusicStream(music: MusicValue): void;
 
+/** Seek music to a position (in seconds) */
+export declare function SeekMusicStream(music: MusicValue, position: number): void;
+
+/** Set volume for music (1.0 is max level) */
+export declare function SetMusicVolume(music: MusicValue, volume: number): void;
+
+/** Set pitch for a music (1.0 is base level) */
+export declare function SetMusicPitch(music: MusicValue, pitch: number): void;
+
+/** Set pan for a music (-1.0 left, 0.0 center, 1.0 right) */
+export declare function SetMusicPan(music: MusicValue, pan: number): void;
+
 /** Get music time length (in seconds) */
 export declare function GetMusicTimeLength(music: MusicValue): number;
 
@@ -2617,6 +2952,15 @@ export declare function IsAudioStreamPlaying(stream: AudioStreamValue): boolean;
 
 /** Stop audio stream */
 export declare function StopAudioStream(stream: AudioStreamValue): void;
+
+/** Set volume for audio stream (1.0 is max level) */
+export declare function SetAudioStreamVolume(stream: AudioStreamValue, volume: number): void;
+
+/** Set pitch for audio stream (1.0 is base level) */
+export declare function SetAudioStreamPitch(stream: AudioStreamValue, pitch: number): void;
+
+/** Set pan for audio stream (-1.0 to 1.0 range, 0.0 is centered) */
+export declare function SetAudioStreamPan(stream: AudioStreamValue, pan: number): void;
 
 /** Default size for new audio streams */
 export declare function SetAudioStreamBufferSizeDefault(size: number): void;

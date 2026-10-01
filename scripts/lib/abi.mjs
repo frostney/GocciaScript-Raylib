@@ -1,4 +1,4 @@
-import { ffiFieldName, renderBindingArtifacts } from "./bindings.mjs";
+import { renderBindingArtifacts } from "./bindings.mjs";
 
 function cString(value) {
   return JSON.stringify(value);
@@ -137,18 +137,17 @@ const probePointer = raylibLibrary.symbol("InitWindow");
 
 const fieldOffset = (Type, field, kind) => {
   const value = Type.create();
-  if (kind === "aggregate") return value[field].byteOffset;
+  // FFI.metadata stays valid when a native field is itself named "buffer".
+  if (kind === "aggregate") return FFI.metadata(value[field]).byteOffset;
+  const storage = new Uint8Array(FFI.metadata(value).buffer);
   if (kind === "pointer") {
     value[field] = probePointer;
     const width = Type.size > 4 ? 8 : 4;
-    return findBytes(
-      new Uint8Array(value.buffer),
-      pointerBytes(probePointer).subarray(0, width),
-    );
+    return findBytes(storage, pointerBytes(probePointer).subarray(0, width));
   }
   const probe = bytesFor(kind);
   value[field] = probe.value;
-  return findBytes(new Uint8Array(value.buffer), probe.bytes);
+  return findBytes(storage, probe.bytes);
 };
 
 `;
@@ -157,7 +156,7 @@ const fieldOffset = (Type, field, kind) => {
     source += `console.log("STRUCT\\t${struct.name}\\t" + ${struct.name}.size + "\\t" + ${struct.name}.alignment);\n`;
     for (const field of struct.fields) {
       const resolved = resolveType(field.type, "field");
-      source += `console.log("FIELD\\t${struct.name}\\t${field.name}\\t" + fieldOffset(${struct.name}, ${cString(ffiFieldName(field.name))}, ${cString(probeKind(resolved))}));\n`;
+      source += `console.log("FIELD\\t${struct.name}\\t${field.name}\\t" + fieldOffset(${struct.name}, ${cString(field.name)}, ${cString(probeKind(resolved))}));\n`;
     }
   }
 

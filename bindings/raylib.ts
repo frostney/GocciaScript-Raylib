@@ -4,12 +4,19 @@
 export const RAYLIB_BINDING_INFO = {
   raylibVersion: "6.0",
   raylibCommit: "dbc56a87da87d973a9c5baa4e7438a9d20121d28",
-  gocciaScriptVersion: "0.10.0",
+  gocciaScriptVersion: "0.14.0",
   linkage: "dynamic",
 };
-export const RAYLIB_FIELD_ALIASES = {
-  AudioStream: { buffer: "nativeBuffer" },
-};
+
+if (typeof FFI === "undefined") {
+  throw new TypeError(
+    "The raylib bindings need GocciaScript's ffi capability. Grant it with " +
+      '--allow-ffi, or with "permissions": { "allow-ffi": true } in a ' +
+      "trusted goccia.json.",
+  );
+}
+
+const nullableUtf8String = FFI.nullable("utf8string");
 
 const raylibCandidates = (): string[] => {
   const suffix = FFI.suffix;
@@ -303,7 +310,7 @@ export const Wave = FFI.struct({
 
 /** AudioStream, custom audio stream */
 export const AudioStream = FFI.struct({
-  "nativeBuffer": "pointer",
+  "buffer": "pointer",
   "processor": "pointer",
   "sampleRate": "u32",
   "sampleSize": "u32",
@@ -1319,16 +1326,10 @@ export const LoadVrStereoConfig = raylibLibrary.bind("LoadVrStereoConfig", { arg
 export const UnloadVrStereoConfig = raylibLibrary.bind("UnloadVrStereoConfig", { args: [VrStereoConfig], returns: "void" });
 
 /** Load shader from files and bind default locations */
-export const LoadShader = raylibLibrary.bind("LoadShader", { args: ["utf8string", "utf8string"], returns: Shader });
-
-/** Raw-pointer variant for nullable C string parameters. */
-export const LoadShaderRaw = raylibLibrary.bind("LoadShader", { args: ["pointer", "pointer"], returns: Shader });
+export const LoadShader = raylibLibrary.bind("LoadShader", { args: [nullableUtf8String, nullableUtf8String], returns: Shader });
 
 /** Load shader from code strings and bind default locations */
-export const LoadShaderFromMemory = raylibLibrary.bind("LoadShaderFromMemory", { args: ["utf8string", "utf8string"], returns: Shader });
-
-/** Raw-pointer variant for nullable C string parameters. */
-export const LoadShaderFromMemoryRaw = raylibLibrary.bind("LoadShaderFromMemory", { args: ["pointer", "pointer"], returns: Shader });
+export const LoadShaderFromMemory = raylibLibrary.bind("LoadShaderFromMemory", { args: [nullableUtf8String, nullableUtf8String], returns: Shader });
 
 /** Check if a shader is valid (loaded on GPU) */
 export const IsShaderValid = raylibLibrary.bind("IsShaderValid", { args: [Shader], returns: "bool" });
@@ -1422,6 +1423,9 @@ export const OpenURL = raylibLibrary.bind("OpenURL", { args: ["utf8string"], ret
 
 /** Set the current threshold (minimum) log level */
 export const SetTraceLogLevel = raylibLibrary.bind("SetTraceLogLevel", { args: ["i32"], returns: "void" });
+
+/** Show trace log messages (LOG_DEBUG, LOG_INFO, LOG_WARNING, LOG_ERROR...) */
+export const TraceLog = raylibLibrary.bind("TraceLog", { args: ["i32", "utf8string"], variadic: true, returns: "void" });
 
 /** Set custom trace log */
 export const SetTraceLogCallback = raylibLibrary.bind("SetTraceLogCallback", { args: ["pointer"], returns: "void" });
@@ -1583,10 +1587,7 @@ export const ComputeSHA1 = raylibLibrary.bind("ComputeSHA1", { args: ["pointer",
 export const ComputeSHA256 = raylibLibrary.bind("ComputeSHA256", { args: ["pointer", "i32"], returns: "pointer" });
 
 /** Load automation events list from file, NULL for empty list, capacity = MAX_AUTOMATION_EVENTS */
-export const LoadAutomationEventList = raylibLibrary.bind("LoadAutomationEventList", { args: ["utf8string"], returns: AutomationEventList });
-
-/** Raw-pointer variant for nullable C string parameters. */
-export const LoadAutomationEventListRaw = raylibLibrary.bind("LoadAutomationEventList", { args: ["pointer"], returns: AutomationEventList });
+export const LoadAutomationEventList = raylibLibrary.bind("LoadAutomationEventList", { args: [nullableUtf8String], returns: AutomationEventList });
 
 /** Unload automation events list from file */
 export const UnloadAutomationEventList = raylibLibrary.bind("UnloadAutomationEventList", { args: [AutomationEventList], returns: "void" });
@@ -1665,6 +1666,9 @@ export const GetGamepadAxisMovement = raylibLibrary.bind("GetGamepadAxisMovement
 
 /** Set internal gamepad mappings (SDL_GameControllerDB) */
 export const SetGamepadMappings = raylibLibrary.bind("SetGamepadMappings", { args: ["utf8string"], returns: "i32" });
+
+/** Set gamepad vibration for both motors (duration in seconds) */
+export const SetGamepadVibration = raylibLibrary.bind("SetGamepadVibration", { args: ["i32", "f32", "f32", "f32"], returns: "void" });
 
 /** Check if a mouse button has been pressed once */
 export const IsMouseButtonPressed = raylibLibrary.bind("IsMouseButtonPressed", { args: ["i32"], returns: "bool" });
@@ -1750,6 +1754,9 @@ export const GetGesturePinchAngle = raylibLibrary.bind("GetGesturePinchAngle", {
 /** Update camera position for selected mode */
 export const UpdateCamera = raylibLibrary.bind("UpdateCamera", { args: ["pointer", "i32"], returns: "void" });
 
+/** Update camera movement/rotation */
+export const UpdateCameraPro = raylibLibrary.bind("UpdateCameraPro", { args: ["pointer", Vector3, Vector3, "f32"], returns: "void" });
+
 /** Set texture and rectangle to be used on shapes drawing */
 export const SetShapesTexture = raylibLibrary.bind("SetShapesTexture", { args: [Texture, Rectangle], returns: "void" });
 
@@ -1771,11 +1778,56 @@ export const DrawLine = raylibLibrary.bind("DrawLine", { args: ["i32", "i32", "i
 /** Draw a line (using gl lines) */
 export const DrawLineV = raylibLibrary.bind("DrawLineV", { args: [Vector2, Vector2, Color], returns: "void" });
 
+/** Draw a line (using triangles/quads) */
+export const DrawLineEx = raylibLibrary.bind("DrawLineEx", { args: [Vector2, Vector2, "f32", Color], returns: "void" });
+
 /** Draw lines sequence (using gl lines) */
 export const DrawLineStrip = raylibLibrary.bind("DrawLineStrip", { args: ["pointer", "i32", Color], returns: "void" });
 
+/** Draw line segment cubic-bezier in-out interpolation */
+export const DrawLineBezier = raylibLibrary.bind("DrawLineBezier", { args: [Vector2, Vector2, "f32", Color], returns: "void" });
+
 /** Draw a dashed line */
 export const DrawLineDashed = raylibLibrary.bind("DrawLineDashed", { args: [Vector2, Vector2, "i32", "i32", Color], returns: "void" });
+
+/** Draw a color-filled circle */
+export const DrawCircle = raylibLibrary.bind("DrawCircle", { args: ["i32", "i32", "f32", Color], returns: "void" });
+
+/** Draw a color-filled circle (Vector version) */
+export const DrawCircleV = raylibLibrary.bind("DrawCircleV", { args: [Vector2, "f32", Color], returns: "void" });
+
+/** Draw a gradient-filled circle */
+export const DrawCircleGradient = raylibLibrary.bind("DrawCircleGradient", { args: [Vector2, "f32", Color, Color], returns: "void" });
+
+/** Draw a piece of a circle */
+export const DrawCircleSector = raylibLibrary.bind("DrawCircleSector", { args: [Vector2, "f32", "f32", "f32", "i32", Color], returns: "void" });
+
+/** Draw circle sector outline */
+export const DrawCircleSectorLines = raylibLibrary.bind("DrawCircleSectorLines", { args: [Vector2, "f32", "f32", "f32", "i32", Color], returns: "void" });
+
+/** Draw circle outline */
+export const DrawCircleLines = raylibLibrary.bind("DrawCircleLines", { args: ["i32", "i32", "f32", Color], returns: "void" });
+
+/** Draw circle outline (Vector version) */
+export const DrawCircleLinesV = raylibLibrary.bind("DrawCircleLinesV", { args: [Vector2, "f32", Color], returns: "void" });
+
+/** Draw ellipse */
+export const DrawEllipse = raylibLibrary.bind("DrawEllipse", { args: ["i32", "i32", "f32", "f32", Color], returns: "void" });
+
+/** Draw ellipse (Vector version) */
+export const DrawEllipseV = raylibLibrary.bind("DrawEllipseV", { args: [Vector2, "f32", "f32", Color], returns: "void" });
+
+/** Draw ellipse outline */
+export const DrawEllipseLines = raylibLibrary.bind("DrawEllipseLines", { args: ["i32", "i32", "f32", "f32", Color], returns: "void" });
+
+/** Draw ellipse outline (Vector version) */
+export const DrawEllipseLinesV = raylibLibrary.bind("DrawEllipseLinesV", { args: [Vector2, "f32", "f32", Color], returns: "void" });
+
+/** Draw ring */
+export const DrawRing = raylibLibrary.bind("DrawRing", { args: [Vector2, "f32", "f32", "f32", "f32", "i32", Color], returns: "void" });
+
+/** Draw ring outline */
+export const DrawRingLines = raylibLibrary.bind("DrawRingLines", { args: [Vector2, "f32", "f32", "f32", "f32", "i32", Color], returns: "void" });
 
 /** Draw a color-filled rectangle */
 export const DrawRectangle = raylibLibrary.bind("DrawRectangle", { args: ["i32", "i32", "i32", "i32", Color], returns: "void" });
@@ -1785,6 +1837,9 @@ export const DrawRectangleV = raylibLibrary.bind("DrawRectangleV", { args: [Vect
 
 /** Draw a color-filled rectangle */
 export const DrawRectangleRec = raylibLibrary.bind("DrawRectangleRec", { args: [Rectangle, Color], returns: "void" });
+
+/** Draw a color-filled rectangle with pro parameters */
+export const DrawRectanglePro = raylibLibrary.bind("DrawRectanglePro", { args: [Rectangle, Vector2, "f32", Color], returns: "void" });
 
 /** Draw a vertical-gradient-filled rectangle */
 export const DrawRectangleGradientV = raylibLibrary.bind("DrawRectangleGradientV", { args: ["i32", "i32", "i32", "i32", Color, Color], returns: "void" });
@@ -1798,6 +1853,18 @@ export const DrawRectangleGradientEx = raylibLibrary.bind("DrawRectangleGradient
 /** Draw rectangle outline */
 export const DrawRectangleLines = raylibLibrary.bind("DrawRectangleLines", { args: ["i32", "i32", "i32", "i32", Color], returns: "void" });
 
+/** Draw rectangle outline with extended parameters */
+export const DrawRectangleLinesEx = raylibLibrary.bind("DrawRectangleLinesEx", { args: [Rectangle, "f32", Color], returns: "void" });
+
+/** Draw rectangle with rounded edges */
+export const DrawRectangleRounded = raylibLibrary.bind("DrawRectangleRounded", { args: [Rectangle, "f32", "i32", Color], returns: "void" });
+
+/** Draw rectangle lines with rounded edges */
+export const DrawRectangleRoundedLines = raylibLibrary.bind("DrawRectangleRoundedLines", { args: [Rectangle, "f32", "i32", Color], returns: "void" });
+
+/** Draw rectangle with rounded edges outline */
+export const DrawRectangleRoundedLinesEx = raylibLibrary.bind("DrawRectangleRoundedLinesEx", { args: [Rectangle, "f32", "i32", "f32", Color], returns: "void" });
+
 /** Draw a color-filled triangle (vertex in counter-clockwise order!) */
 export const DrawTriangle = raylibLibrary.bind("DrawTriangle", { args: [Vector2, Vector2, Vector2, Color], returns: "void" });
 
@@ -1810,11 +1877,77 @@ export const DrawTriangleFan = raylibLibrary.bind("DrawTriangleFan", { args: ["p
 /** Draw a triangle strip defined by points */
 export const DrawTriangleStrip = raylibLibrary.bind("DrawTriangleStrip", { args: ["pointer", "i32", Color], returns: "void" });
 
+/** Draw a regular polygon (Vector version) */
+export const DrawPoly = raylibLibrary.bind("DrawPoly", { args: [Vector2, "i32", "f32", "f32", Color], returns: "void" });
+
+/** Draw a polygon outline of n sides */
+export const DrawPolyLines = raylibLibrary.bind("DrawPolyLines", { args: [Vector2, "i32", "f32", "f32", Color], returns: "void" });
+
+/** Draw a polygon outline of n sides with extended parameters */
+export const DrawPolyLinesEx = raylibLibrary.bind("DrawPolyLinesEx", { args: [Vector2, "i32", "f32", "f32", "f32", Color], returns: "void" });
+
+/** Draw spline: Linear, minimum 2 points */
+export const DrawSplineLinear = raylibLibrary.bind("DrawSplineLinear", { args: ["pointer", "i32", "f32", Color], returns: "void" });
+
+/** Draw spline: B-Spline, minimum 4 points */
+export const DrawSplineBasis = raylibLibrary.bind("DrawSplineBasis", { args: ["pointer", "i32", "f32", Color], returns: "void" });
+
+/** Draw spline: Catmull-Rom, minimum 4 points */
+export const DrawSplineCatmullRom = raylibLibrary.bind("DrawSplineCatmullRom", { args: ["pointer", "i32", "f32", Color], returns: "void" });
+
+/** Draw spline: Quadratic Bezier, minimum 3 points (1 control point): [p1, c2, p3, c4...] */
+export const DrawSplineBezierQuadratic = raylibLibrary.bind("DrawSplineBezierQuadratic", { args: ["pointer", "i32", "f32", Color], returns: "void" });
+
+/** Draw spline: Cubic Bezier, minimum 4 points (2 control points): [p1, c2, c3, p4, c5, c6...] */
+export const DrawSplineBezierCubic = raylibLibrary.bind("DrawSplineBezierCubic", { args: ["pointer", "i32", "f32", Color], returns: "void" });
+
+/** Draw spline segment: Linear, 2 points */
+export const DrawSplineSegmentLinear = raylibLibrary.bind("DrawSplineSegmentLinear", { args: [Vector2, Vector2, "f32", Color], returns: "void" });
+
+/** Draw spline segment: B-Spline, 4 points */
+export const DrawSplineSegmentBasis = raylibLibrary.bind("DrawSplineSegmentBasis", { args: [Vector2, Vector2, Vector2, Vector2, "f32", Color], returns: "void" });
+
+/** Draw spline segment: Catmull-Rom, 4 points */
+export const DrawSplineSegmentCatmullRom = raylibLibrary.bind("DrawSplineSegmentCatmullRom", { args: [Vector2, Vector2, Vector2, Vector2, "f32", Color], returns: "void" });
+
+/** Draw spline segment: Quadratic Bezier, 2 points, 1 control point */
+export const DrawSplineSegmentBezierQuadratic = raylibLibrary.bind("DrawSplineSegmentBezierQuadratic", { args: [Vector2, Vector2, Vector2, "f32", Color], returns: "void" });
+
+/** Draw spline segment: Cubic Bezier, 2 points, 2 control points */
+export const DrawSplineSegmentBezierCubic = raylibLibrary.bind("DrawSplineSegmentBezierCubic", { args: [Vector2, Vector2, Vector2, Vector2, "f32", Color], returns: "void" });
+
+/** Get (evaluate) spline point: Linear */
+export const GetSplinePointLinear = raylibLibrary.bind("GetSplinePointLinear", { args: [Vector2, Vector2, "f32"], returns: Vector2 });
+
+/** Get (evaluate) spline point: B-Spline */
+export const GetSplinePointBasis = raylibLibrary.bind("GetSplinePointBasis", { args: [Vector2, Vector2, Vector2, Vector2, "f32"], returns: Vector2 });
+
+/** Get (evaluate) spline point: Catmull-Rom */
+export const GetSplinePointCatmullRom = raylibLibrary.bind("GetSplinePointCatmullRom", { args: [Vector2, Vector2, Vector2, Vector2, "f32"], returns: Vector2 });
+
+/** Get (evaluate) spline point: Quadratic Bezier */
+export const GetSplinePointBezierQuad = raylibLibrary.bind("GetSplinePointBezierQuad", { args: [Vector2, Vector2, Vector2, "f32"], returns: Vector2 });
+
+/** Get (evaluate) spline point: Cubic Bezier */
+export const GetSplinePointBezierCubic = raylibLibrary.bind("GetSplinePointBezierCubic", { args: [Vector2, Vector2, Vector2, Vector2, "f32"], returns: Vector2 });
+
 /** Check collision between two rectangles */
 export const CheckCollisionRecs = raylibLibrary.bind("CheckCollisionRecs", { args: [Rectangle, Rectangle], returns: "bool" });
 
+/** Check collision between two circles */
+export const CheckCollisionCircles = raylibLibrary.bind("CheckCollisionCircles", { args: [Vector2, "f32", Vector2, "f32"], returns: "bool" });
+
+/** Check collision between circle and rectangle */
+export const CheckCollisionCircleRec = raylibLibrary.bind("CheckCollisionCircleRec", { args: [Vector2, "f32", Rectangle], returns: "bool" });
+
+/** Check if circle collides with a line created betweeen two points [p1] and [p2] */
+export const CheckCollisionCircleLine = raylibLibrary.bind("CheckCollisionCircleLine", { args: [Vector2, "f32", Vector2, Vector2], returns: "bool" });
+
 /** Check if point is inside rectangle */
 export const CheckCollisionPointRec = raylibLibrary.bind("CheckCollisionPointRec", { args: [Vector2, Rectangle], returns: "bool" });
+
+/** Check if point is inside circle */
+export const CheckCollisionPointCircle = raylibLibrary.bind("CheckCollisionPointCircle", { args: [Vector2, Vector2, "f32"], returns: "bool" });
 
 /** Check if point is inside a triangle */
 export const CheckCollisionPointTriangle = raylibLibrary.bind("CheckCollisionPointTriangle", { args: [Vector2, Vector2, Vector2, Vector2], returns: "bool" });
@@ -1873,8 +2006,20 @@ export const GenImageColor = raylibLibrary.bind("GenImageColor", { args: ["i32",
 /** Generate image: linear gradient, direction in degrees [0..360], 0=Vertical gradient */
 export const GenImageGradientLinear = raylibLibrary.bind("GenImageGradientLinear", { args: ["i32", "i32", "i32", Color, Color], returns: Image });
 
+/** Generate image: radial gradient */
+export const GenImageGradientRadial = raylibLibrary.bind("GenImageGradientRadial", { args: ["i32", "i32", "f32", Color, Color], returns: Image });
+
+/** Generate image: square gradient */
+export const GenImageGradientSquare = raylibLibrary.bind("GenImageGradientSquare", { args: ["i32", "i32", "f32", Color, Color], returns: Image });
+
 /** Generate image: checked */
 export const GenImageChecked = raylibLibrary.bind("GenImageChecked", { args: ["i32", "i32", "i32", "i32", Color, Color], returns: Image });
+
+/** Generate image: white noise */
+export const GenImageWhiteNoise = raylibLibrary.bind("GenImageWhiteNoise", { args: ["i32", "i32", "f32"], returns: Image });
+
+/** Generate image: perlin noise */
+export const GenImagePerlinNoise = raylibLibrary.bind("GenImagePerlinNoise", { args: ["i32", "i32", "i32", "i32", "f32"], returns: Image });
 
 /** Generate image: cellular algorithm, bigger tileSize means bigger cells */
 export const GenImageCellular = raylibLibrary.bind("GenImageCellular", { args: ["i32", "i32", "i32"], returns: Image });
@@ -1894,6 +2039,9 @@ export const ImageFromChannel = raylibLibrary.bind("ImageFromChannel", { args: [
 /** Create an image from text (default font) */
 export const ImageText = raylibLibrary.bind("ImageText", { args: ["utf8string", "i32", Color], returns: Image });
 
+/** Create an image from text (custom sprite font) */
+export const ImageTextEx = raylibLibrary.bind("ImageTextEx", { args: [Font, "utf8string", "f32", "f32", Color], returns: Image });
+
 /** Convert image data to desired format */
 export const ImageFormat = raylibLibrary.bind("ImageFormat", { args: ["pointer", "i32"], returns: "void" });
 
@@ -1902,6 +2050,12 @@ export const ImageToPOT = raylibLibrary.bind("ImageToPOT", { args: ["pointer", C
 
 /** Crop an image to a defined rectangle */
 export const ImageCrop = raylibLibrary.bind("ImageCrop", { args: ["pointer", Rectangle], returns: "void" });
+
+/** Crop image depending on alpha value */
+export const ImageAlphaCrop = raylibLibrary.bind("ImageAlphaCrop", { args: ["pointer", "f32"], returns: "void" });
+
+/** Clear alpha channel to desired color */
+export const ImageAlphaClear = raylibLibrary.bind("ImageAlphaClear", { args: ["pointer", Color, "f32"], returns: "void" });
 
 /** Apply alpha mask to image */
 export const ImageAlphaMask = raylibLibrary.bind("ImageAlphaMask", { args: ["pointer", Image], returns: "void" });
@@ -1954,6 +2108,9 @@ export const ImageColorInvert = raylibLibrary.bind("ImageColorInvert", { args: [
 /** Modify image color: grayscale */
 export const ImageColorGrayscale = raylibLibrary.bind("ImageColorGrayscale", { args: ["pointer"], returns: "void" });
 
+/** Modify image color: contrast (-100 to 100) */
+export const ImageColorContrast = raylibLibrary.bind("ImageColorContrast", { args: ["pointer", "f32"], returns: "void" });
+
 /** Modify image color: brightness (-255 to 255) */
 export const ImageColorBrightness = raylibLibrary.bind("ImageColorBrightness", { args: ["pointer", "i32"], returns: "void" });
 
@@ -1971,6 +2128,9 @@ export const UnloadImageColors = raylibLibrary.bind("UnloadImageColors", { args:
 
 /** Unload colors palette loaded with LoadImagePalette() */
 export const UnloadImagePalette = raylibLibrary.bind("UnloadImagePalette", { args: ["pointer"], returns: "void" });
+
+/** Get image alpha border rectangle */
+export const GetImageAlphaBorder = raylibLibrary.bind("GetImageAlphaBorder", { args: [Image, "f32"], returns: Rectangle });
 
 /** Get image pixel color at (x, y) position */
 export const GetImageColor = raylibLibrary.bind("GetImageColor", { args: [Image, "i32", "i32"], returns: Color });
@@ -2038,6 +2198,9 @@ export const ImageDraw = raylibLibrary.bind("ImageDraw", { args: ["pointer", Ima
 /** Draw text (using default font) within an image (destination) */
 export const ImageDrawText = raylibLibrary.bind("ImageDrawText", { args: ["pointer", "utf8string", "i32", "i32", "i32", Color], returns: "void" });
 
+/** Draw text (custom sprite font) within an image (destination) */
+export const ImageDrawTextEx = raylibLibrary.bind("ImageDrawTextEx", { args: ["pointer", Font, "utf8string", Vector2, "f32", "f32", Color], returns: "void" });
+
 /** Load texture from file into GPU memory (VRAM) */
 export const LoadTexture = raylibLibrary.bind("LoadTexture", { args: ["utf8string"], returns: Texture });
 
@@ -2083,11 +2246,23 @@ export const DrawTexture = raylibLibrary.bind("DrawTexture", { args: [Texture, "
 /** Draw a Texture2D with position defined as Vector2 */
 export const DrawTextureV = raylibLibrary.bind("DrawTextureV", { args: [Texture, Vector2, Color], returns: "void" });
 
+/** Draw a Texture2D with extended parameters */
+export const DrawTextureEx = raylibLibrary.bind("DrawTextureEx", { args: [Texture, Vector2, "f32", "f32", Color], returns: "void" });
+
 /** Draw a part of a texture defined by a rectangle */
 export const DrawTextureRec = raylibLibrary.bind("DrawTextureRec", { args: [Texture, Rectangle, Vector2, Color], returns: "void" });
 
+/** Draw a part of a texture defined by a rectangle with 'pro' parameters */
+export const DrawTexturePro = raylibLibrary.bind("DrawTexturePro", { args: [Texture, Rectangle, Rectangle, Vector2, "f32", Color], returns: "void" });
+
+/** Draws a texture (or part of it) that stretches or shrinks nicely */
+export const DrawTextureNPatch = raylibLibrary.bind("DrawTextureNPatch", { args: [Texture, NPatchInfo, Rectangle, Vector2, "f32", Color], returns: "void" });
+
 /** Check if two colors are equal */
 export const ColorIsEqual = raylibLibrary.bind("ColorIsEqual", { args: [Color, Color], returns: "bool" });
+
+/** Get color with alpha applied, alpha goes from 0.0f to 1.0f */
+export const Fade = raylibLibrary.bind("Fade", { args: [Color, "f32"], returns: Color });
 
 /** Get hexadecimal value for a Color (0xRRGGBBAA) */
 export const ColorToInt = raylibLibrary.bind("ColorToInt", { args: [Color], returns: "i32" });
@@ -2107,8 +2282,20 @@ export const ColorFromHSV = raylibLibrary.bind("ColorFromHSV", { args: ["f32", "
 /** Get color multiplied with another color */
 export const ColorTint = raylibLibrary.bind("ColorTint", { args: [Color, Color], returns: Color });
 
+/** Get color with brightness correction, brightness factor goes from -1.0f to 1.0f */
+export const ColorBrightness = raylibLibrary.bind("ColorBrightness", { args: [Color, "f32"], returns: Color });
+
+/** Get color with contrast correction, contrast values between -1.0f and 1.0f */
+export const ColorContrast = raylibLibrary.bind("ColorContrast", { args: [Color, "f32"], returns: Color });
+
+/** Get color with alpha applied, alpha goes from 0.0f to 1.0f */
+export const ColorAlpha = raylibLibrary.bind("ColorAlpha", { args: [Color, "f32"], returns: Color });
+
 /** Get src alpha-blended into dst color with tint */
 export const ColorAlphaBlend = raylibLibrary.bind("ColorAlphaBlend", { args: [Color, Color, Color], returns: Color });
+
+/** Get color lerp interpolation between two colors, factor [0.0f..1.0f] */
+export const ColorLerp = raylibLibrary.bind("ColorLerp", { args: [Color, Color, "f32"], returns: Color });
 
 /** Get Color structure from hexadecimal value */
 export const GetColor = raylibLibrary.bind("GetColor", { args: ["u32"], returns: Color });
@@ -2161,11 +2348,29 @@ export const DrawFPS = raylibLibrary.bind("DrawFPS", { args: ["i32", "i32"], ret
 /** Draw text (using default font) */
 export const DrawText = raylibLibrary.bind("DrawText", { args: ["utf8string", "i32", "i32", "i32", Color], returns: "void" });
 
+/** Draw text using font and additional parameters */
+export const DrawTextEx = raylibLibrary.bind("DrawTextEx", { args: [Font, "utf8string", Vector2, "f32", "f32", Color], returns: "void" });
+
+/** Draw text using Font and pro parameters (rotation) */
+export const DrawTextPro = raylibLibrary.bind("DrawTextPro", { args: [Font, "utf8string", Vector2, Vector2, "f32", "f32", "f32", Color], returns: "void" });
+
+/** Draw one character (codepoint) */
+export const DrawTextCodepoint = raylibLibrary.bind("DrawTextCodepoint", { args: [Font, "i32", Vector2, "f32", Color], returns: "void" });
+
+/** Draw multiple character (codepoint) */
+export const DrawTextCodepoints = raylibLibrary.bind("DrawTextCodepoints", { args: [Font, "pointer", "i32", Vector2, "f32", "f32", Color], returns: "void" });
+
 /** Set vertical line spacing when drawing with line-breaks */
 export const SetTextLineSpacing = raylibLibrary.bind("SetTextLineSpacing", { args: ["i32"], returns: "void" });
 
 /** Measure string width for default font */
 export const MeasureText = raylibLibrary.bind("MeasureText", { args: ["utf8string", "i32"], returns: "i32" });
+
+/** Measure string size for Font */
+export const MeasureTextEx = raylibLibrary.bind("MeasureTextEx", { args: [Font, "utf8string", "f32", "f32"], returns: Vector2 });
+
+/** Measure string size for an existing array of codepoints for Font */
+export const MeasureTextCodepoints = raylibLibrary.bind("MeasureTextCodepoints", { args: [Font, "pointer", "i32", "f32", "f32"], returns: Vector2 });
 
 /** Get glyph index position in font for a codepoint (unicode character), fallback to '?' if not found */
 export const GetGlyphIndex = raylibLibrary.bind("GetGlyphIndex", { args: [Font, "i32"], returns: "i32" });
@@ -2218,6 +2423,9 @@ export const TextIsEqual = raylibLibrary.bind("TextIsEqual", { args: ["utf8strin
 /** Get text length, checks for '\0' ending */
 export const TextLength = raylibLibrary.bind("TextLength", { args: ["utf8string"], returns: "u32" });
 
+/** Text formatting with variables (sprintf() style) */
+export const TextFormat = raylibLibrary.bind("TextFormat", { args: ["utf8string"], variadic: true, returns: "utf8string" });
+
 /** Get a piece of a text string */
 export const TextSubtext = raylibLibrary.bind("TextSubtext", { args: ["utf8string", "i32", "i32"], returns: "utf8string" });
 
@@ -2228,28 +2436,16 @@ export const TextRemoveSpaces = raylibLibrary.bind("TextRemoveSpaces", { args: [
 export const GetTextBetween = raylibLibrary.bind("GetTextBetween", { args: ["utf8string", "utf8string", "utf8string"], returns: "utf8string" });
 
 /** Replace text string with new string */
-export const TextReplace = raylibLibrary.bind("TextReplace", { args: ["utf8string", "utf8string", "utf8string"], returns: "utf8string" });
-
-/** Raw-pointer variant for nullable C string parameters. */
-export const TextReplaceRaw = raylibLibrary.bind("TextReplace", { args: ["utf8string", "utf8string", "pointer"], returns: "utf8string" });
+export const TextReplace = raylibLibrary.bind("TextReplace", { args: ["utf8string", "utf8string", nullableUtf8String], returns: "utf8string" });
 
 /** Replace text string with new string, memory must be MemFree() */
-export const TextReplaceAlloc = raylibLibrary.bind("TextReplaceAlloc", { args: ["utf8string", "utf8string", "utf8string"], returns: "pointer" });
-
-/** Raw-pointer variant for nullable C string parameters. */
-export const TextReplaceAllocRaw = raylibLibrary.bind("TextReplaceAlloc", { args: ["utf8string", "utf8string", "pointer"], returns: "pointer" });
+export const TextReplaceAlloc = raylibLibrary.bind("TextReplaceAlloc", { args: ["utf8string", "utf8string", nullableUtf8String], returns: "pointer" });
 
 /** Replace text between two specific strings */
-export const TextReplaceBetween = raylibLibrary.bind("TextReplaceBetween", { args: ["utf8string", "utf8string", "utf8string", "utf8string"], returns: "utf8string" });
-
-/** Raw-pointer variant for nullable C string parameters. */
-export const TextReplaceBetweenRaw = raylibLibrary.bind("TextReplaceBetween", { args: ["utf8string", "utf8string", "utf8string", "pointer"], returns: "utf8string" });
+export const TextReplaceBetween = raylibLibrary.bind("TextReplaceBetween", { args: ["utf8string", "utf8string", "utf8string", nullableUtf8String], returns: "utf8string" });
 
 /** Replace text between two specific strings, memory must be MemFree() */
-export const TextReplaceBetweenAlloc = raylibLibrary.bind("TextReplaceBetweenAlloc", { args: ["utf8string", "utf8string", "utf8string", "utf8string"], returns: "pointer" });
-
-/** Raw-pointer variant for nullable C string parameters. */
-export const TextReplaceBetweenAllocRaw = raylibLibrary.bind("TextReplaceBetweenAlloc", { args: ["utf8string", "utf8string", "utf8string", "pointer"], returns: "pointer" });
+export const TextReplaceBetweenAlloc = raylibLibrary.bind("TextReplaceBetweenAlloc", { args: ["utf8string", "utf8string", "utf8string", nullableUtf8String], returns: "pointer" });
 
 /** Insert text in a defined byte position */
 export const TextInsert = raylibLibrary.bind("TextInsert", { args: ["utf8string", "utf8string", "i32"], returns: "utf8string" });
@@ -2296,23 +2492,62 @@ export const DrawLine3D = raylibLibrary.bind("DrawLine3D", { args: [Vector3, Vec
 /** Draw a point in 3D space, actually a small line */
 export const DrawPoint3D = raylibLibrary.bind("DrawPoint3D", { args: [Vector3, Color], returns: "void" });
 
+/** Draw a circle in 3D world space */
+export const DrawCircle3D = raylibLibrary.bind("DrawCircle3D", { args: [Vector3, "f32", Vector3, "f32", Color], returns: "void" });
+
 /** Draw a color-filled triangle (vertex in counter-clockwise order!) */
 export const DrawTriangle3D = raylibLibrary.bind("DrawTriangle3D", { args: [Vector3, Vector3, Vector3, Color], returns: "void" });
 
 /** Draw a triangle strip defined by points */
 export const DrawTriangleStrip3D = raylibLibrary.bind("DrawTriangleStrip3D", { args: ["pointer", "i32", Color], returns: "void" });
 
+/** Draw cube */
+export const DrawCube = raylibLibrary.bind("DrawCube", { args: [Vector3, "f32", "f32", "f32", Color], returns: "void" });
+
 /** Draw cube (Vector version) */
 export const DrawCubeV = raylibLibrary.bind("DrawCubeV", { args: [Vector3, Vector3, Color], returns: "void" });
 
+/** Draw cube wires */
+export const DrawCubeWires = raylibLibrary.bind("DrawCubeWires", { args: [Vector3, "f32", "f32", "f32", Color], returns: "void" });
+
 /** Draw cube wires (Vector version) */
 export const DrawCubeWiresV = raylibLibrary.bind("DrawCubeWiresV", { args: [Vector3, Vector3, Color], returns: "void" });
+
+/** Draw sphere */
+export const DrawSphere = raylibLibrary.bind("DrawSphere", { args: [Vector3, "f32", Color], returns: "void" });
+
+/** Draw sphere with extended parameters */
+export const DrawSphereEx = raylibLibrary.bind("DrawSphereEx", { args: [Vector3, "f32", "i32", "i32", Color], returns: "void" });
+
+/** Draw sphere wires */
+export const DrawSphereWires = raylibLibrary.bind("DrawSphereWires", { args: [Vector3, "f32", "i32", "i32", Color], returns: "void" });
+
+/** Draw a cylinder/cone */
+export const DrawCylinder = raylibLibrary.bind("DrawCylinder", { args: [Vector3, "f32", "f32", "f32", "i32", Color], returns: "void" });
+
+/** Draw a cylinder with base at startPos and top at endPos */
+export const DrawCylinderEx = raylibLibrary.bind("DrawCylinderEx", { args: [Vector3, Vector3, "f32", "f32", "i32", Color], returns: "void" });
+
+/** Draw a cylinder/cone wires */
+export const DrawCylinderWires = raylibLibrary.bind("DrawCylinderWires", { args: [Vector3, "f32", "f32", "f32", "i32", Color], returns: "void" });
+
+/** Draw a cylinder wires with base at startPos and top at endPos */
+export const DrawCylinderWiresEx = raylibLibrary.bind("DrawCylinderWiresEx", { args: [Vector3, Vector3, "f32", "f32", "i32", Color], returns: "void" });
+
+/** Draw a capsule with the center of its sphere caps at startPos and endPos */
+export const DrawCapsule = raylibLibrary.bind("DrawCapsule", { args: [Vector3, Vector3, "f32", "i32", "i32", Color], returns: "void" });
+
+/** Draw capsule wireframe with the center of its sphere caps at startPos and endPos */
+export const DrawCapsuleWires = raylibLibrary.bind("DrawCapsuleWires", { args: [Vector3, Vector3, "f32", "i32", "i32", Color], returns: "void" });
 
 /** Draw a plane XZ */
 export const DrawPlane = raylibLibrary.bind("DrawPlane", { args: [Vector3, Vector2, Color], returns: "void" });
 
 /** Draw a ray line */
 export const DrawRay = raylibLibrary.bind("DrawRay", { args: [Ray, Color], returns: "void" });
+
+/** Draw a grid (centered at (0, 0, 0)) */
+export const DrawGrid = raylibLibrary.bind("DrawGrid", { args: ["i32", "f32"], returns: "void" });
 
 /** Load model from files (meshes and materials) */
 export const LoadModel = raylibLibrary.bind("LoadModel", { args: ["utf8string"], returns: Model });
@@ -2329,11 +2564,29 @@ export const UnloadModel = raylibLibrary.bind("UnloadModel", { args: [Model], re
 /** Compute model bounding box limits (considers all meshes) */
 export const GetModelBoundingBox = raylibLibrary.bind("GetModelBoundingBox", { args: [Model], returns: BoundingBox });
 
+/** Draw a model (with texture if set) */
+export const DrawModel = raylibLibrary.bind("DrawModel", { args: [Model, Vector3, "f32", Color], returns: "void" });
+
+/** Draw a model with extended parameters */
+export const DrawModelEx = raylibLibrary.bind("DrawModelEx", { args: [Model, Vector3, Vector3, "f32", Vector3, Color], returns: "void" });
+
+/** Draw a model wires (with texture if set) */
+export const DrawModelWires = raylibLibrary.bind("DrawModelWires", { args: [Model, Vector3, "f32", Color], returns: "void" });
+
+/** Draw a model wires (with texture if set) with extended parameters */
+export const DrawModelWiresEx = raylibLibrary.bind("DrawModelWiresEx", { args: [Model, Vector3, Vector3, "f32", Vector3, Color], returns: "void" });
+
 /** Draw bounding box (wires) */
 export const DrawBoundingBox = raylibLibrary.bind("DrawBoundingBox", { args: [BoundingBox, Color], returns: "void" });
 
+/** Draw a billboard texture */
+export const DrawBillboard = raylibLibrary.bind("DrawBillboard", { args: [Camera3D, Texture, Vector3, "f32", Color], returns: "void" });
+
 /** Draw a billboard texture defined by source */
 export const DrawBillboardRec = raylibLibrary.bind("DrawBillboardRec", { args: [Camera3D, Texture, Rectangle, Vector3, Vector2, Color], returns: "void" });
+
+/** Draw a billboard texture defined by source and rotation */
+export const DrawBillboardPro = raylibLibrary.bind("DrawBillboardPro", { args: [Camera3D, Texture, Rectangle, Vector3, Vector3, Vector2, Vector2, "f32", Color], returns: "void" });
 
 /** Upload mesh vertex data in GPU and provide VAO/VBO ids */
 export const UploadMesh = raylibLibrary.bind("UploadMesh", { args: ["pointer", "bool"], returns: "void" });
@@ -2362,8 +2615,32 @@ export const ExportMesh = raylibLibrary.bind("ExportMesh", { args: [Mesh, "utf8s
 /** Export mesh as code file (.h) defining multiple arrays of vertex attributes */
 export const ExportMeshAsCode = raylibLibrary.bind("ExportMeshAsCode", { args: [Mesh, "utf8string"], returns: "bool" });
 
+/** Generate polygonal mesh */
+export const GenMeshPoly = raylibLibrary.bind("GenMeshPoly", { args: ["i32", "f32"], returns: Mesh });
+
+/** Generate plane mesh (with subdivisions) */
+export const GenMeshPlane = raylibLibrary.bind("GenMeshPlane", { args: ["f32", "f32", "i32", "i32"], returns: Mesh });
+
 /** Generate cuboid mesh */
 export const GenMeshCube = raylibLibrary.bind("GenMeshCube", { args: ["f32", "f32", "f32"], returns: Mesh });
+
+/** Generate sphere mesh (standard sphere) */
+export const GenMeshSphere = raylibLibrary.bind("GenMeshSphere", { args: ["f32", "i32", "i32"], returns: Mesh });
+
+/** Generate half-sphere mesh (no bottom cap) */
+export const GenMeshHemiSphere = raylibLibrary.bind("GenMeshHemiSphere", { args: ["f32", "i32", "i32"], returns: Mesh });
+
+/** Generate cylinder mesh */
+export const GenMeshCylinder = raylibLibrary.bind("GenMeshCylinder", { args: ["f32", "f32", "i32"], returns: Mesh });
+
+/** Generate cone/pyramid mesh */
+export const GenMeshCone = raylibLibrary.bind("GenMeshCone", { args: ["f32", "f32", "i32"], returns: Mesh });
+
+/** Generate torus mesh */
+export const GenMeshTorus = raylibLibrary.bind("GenMeshTorus", { args: ["f32", "f32", "i32", "i32"], returns: Mesh });
+
+/** Generate trefoil knot mesh */
+export const GenMeshKnot = raylibLibrary.bind("GenMeshKnot", { args: ["f32", "f32", "i32", "i32"], returns: Mesh });
 
 /** Generate heightmap mesh from image data */
 export const GenMeshHeightmap = raylibLibrary.bind("GenMeshHeightmap", { args: [Image, Vector3], returns: Mesh });
@@ -2392,14 +2669,29 @@ export const SetModelMeshMaterial = raylibLibrary.bind("SetModelMeshMaterial", {
 /** Load model animations from file */
 export const LoadModelAnimations = raylibLibrary.bind("LoadModelAnimations", { args: ["utf8string", "pointer"], returns: "pointer" });
 
+/** Update model animation pose (vertex buffers and bone matrices) */
+export const UpdateModelAnimation = raylibLibrary.bind("UpdateModelAnimation", { args: [Model, ModelAnimation, "f32"], returns: "void" });
+
+/** Update model animation pose, blending two animations */
+export const UpdateModelAnimationEx = raylibLibrary.bind("UpdateModelAnimationEx", { args: [Model, ModelAnimation, "f32", ModelAnimation, "f32", "f32"], returns: "void" });
+
 /** Unload animation array data */
 export const UnloadModelAnimations = raylibLibrary.bind("UnloadModelAnimations", { args: ["pointer", "i32"], returns: "void" });
 
 /** Check model animation skeleton match */
 export const IsModelAnimationValid = raylibLibrary.bind("IsModelAnimationValid", { args: [Model, ModelAnimation], returns: "bool" });
 
+/** Check collision between two spheres */
+export const CheckCollisionSpheres = raylibLibrary.bind("CheckCollisionSpheres", { args: [Vector3, "f32", Vector3, "f32"], returns: "bool" });
+
 /** Check collision between two bounding boxes */
 export const CheckCollisionBoxes = raylibLibrary.bind("CheckCollisionBoxes", { args: [BoundingBox, BoundingBox], returns: "bool" });
+
+/** Check collision between box and sphere */
+export const CheckCollisionBoxSphere = raylibLibrary.bind("CheckCollisionBoxSphere", { args: [BoundingBox, Vector3, "f32"], returns: "bool" });
+
+/** Get collision info between ray and sphere */
+export const GetRayCollisionSphere = raylibLibrary.bind("GetRayCollisionSphere", { args: [Ray, Vector3, "f32"], returns: RayCollision });
 
 /** Get collision info between ray and box */
 export const GetRayCollisionBox = raylibLibrary.bind("GetRayCollisionBox", { args: [Ray, BoundingBox], returns: RayCollision });
@@ -2482,6 +2774,15 @@ export const ResumeSound = raylibLibrary.bind("ResumeSound", { args: [Sound], re
 /** Check if a sound is currently playing */
 export const IsSoundPlaying = raylibLibrary.bind("IsSoundPlaying", { args: [Sound], returns: "bool" });
 
+/** Set volume for a sound (1.0 is max level) */
+export const SetSoundVolume = raylibLibrary.bind("SetSoundVolume", { args: [Sound, "f32"], returns: "void" });
+
+/** Set pitch for a sound (1.0 is base level) */
+export const SetSoundPitch = raylibLibrary.bind("SetSoundPitch", { args: [Sound, "f32"], returns: "void" });
+
+/** Set pan for a sound (-1.0 left, 0.0 center, 1.0 right) */
+export const SetSoundPan = raylibLibrary.bind("SetSoundPan", { args: [Sound, "f32"], returns: "void" });
+
 /** Copy a wave to a new wave */
 export const WaveCopy = raylibLibrary.bind("WaveCopy", { args: [Wave], returns: Wave });
 
@@ -2527,6 +2828,18 @@ export const PauseMusicStream = raylibLibrary.bind("PauseMusicStream", { args: [
 /** Resume playing paused music */
 export const ResumeMusicStream = raylibLibrary.bind("ResumeMusicStream", { args: [Music], returns: "void" });
 
+/** Seek music to a position (in seconds) */
+export const SeekMusicStream = raylibLibrary.bind("SeekMusicStream", { args: [Music, "f32"], returns: "void" });
+
+/** Set volume for music (1.0 is max level) */
+export const SetMusicVolume = raylibLibrary.bind("SetMusicVolume", { args: [Music, "f32"], returns: "void" });
+
+/** Set pitch for a music (1.0 is base level) */
+export const SetMusicPitch = raylibLibrary.bind("SetMusicPitch", { args: [Music, "f32"], returns: "void" });
+
+/** Set pan for a music (-1.0 left, 0.0 center, 1.0 right) */
+export const SetMusicPan = raylibLibrary.bind("SetMusicPan", { args: [Music, "f32"], returns: "void" });
+
 /** Get music time length (in seconds) */
 export const GetMusicTimeLength = raylibLibrary.bind("GetMusicTimeLength", { args: [Music], returns: "f32" });
 
@@ -2562,6 +2875,15 @@ export const IsAudioStreamPlaying = raylibLibrary.bind("IsAudioStreamPlaying", {
 
 /** Stop audio stream */
 export const StopAudioStream = raylibLibrary.bind("StopAudioStream", { args: [AudioStream], returns: "void" });
+
+/** Set volume for audio stream (1.0 is max level) */
+export const SetAudioStreamVolume = raylibLibrary.bind("SetAudioStreamVolume", { args: [AudioStream, "f32"], returns: "void" });
+
+/** Set pitch for audio stream (1.0 is base level) */
+export const SetAudioStreamPitch = raylibLibrary.bind("SetAudioStreamPitch", { args: [AudioStream, "f32"], returns: "void" });
+
+/** Set pan for audio stream (-1.0 to 1.0 range, 0.0 is centered) */
+export const SetAudioStreamPan = raylibLibrary.bind("SetAudioStreamPan", { args: [AudioStream, "f32"], returns: "void" });
 
 /** Default size for new audio streams */
 export const SetAudioStreamBufferSizeDefault = raylibLibrary.bind("SetAudioStreamBufferSizeDefault", { args: ["i32"], returns: "void" });

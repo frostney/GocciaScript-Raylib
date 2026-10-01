@@ -28,12 +28,6 @@ const scalarTypes = new Map([
   ["void", "void"],
 ]);
 
-const intentionalSkips = new Map([
-  ["TraceLog", "varargs"],
-  ["TextFormat", "varargs"],
-  ["DrawBillboardPro", "more-than-8-arguments"],
-]);
-
 const nullableStringParameters = new Map([
   ["LoadShader", [0, 1]],
   ["LoadShaderFromMemory", [0, 1]],
@@ -53,11 +47,9 @@ const ownedTextReturns = new Set([
   "TextInsertAlloc",
 ]);
 
-export function ffiFieldName(name) {
-  if (name === "buffer") return "nativeBuffer";
-  if (name === "byteOffset") return "nativeByteOffset";
-  return name;
-}
+// Aggregate values expose these backing-store properties directly unless a
+// native field of the same name takes precedence; FFI.metadata always works.
+const aggregateMetadataNames = ["buffer", "byteOffset", "size"];
 
 function cleanType(type) {
   return type
@@ -178,9 +170,6 @@ function resolveType(type, env, context = "argument", stack = []) {
       aliasTarget: resolved,
     };
   }
-  if (name === "...") {
-    throw new Error("varargs are unsupported");
-  }
   throw new Error(`Unsupported C type: ${type}`);
 }
 
@@ -244,9 +233,16 @@ export const RAYLIB_BINDING_INFO = {
   gocciaScriptVersion: "${goccia.version}",
   linkage: "dynamic",
 };
-export const RAYLIB_FIELD_ALIASES = {
-  AudioStream: { buffer: "nativeBuffer" },
-};
+
+if (typeof FFI === "undefined") {
+  throw new TypeError(
+    "The raylib bindings need GocciaScript's ffi capability. Grant it with " +
+      '--allow-ffi, or with "permissions": { "allow-ffi": true } in a ' +
+      "trusted goccia.json.",
+  );
+}
+
+const nullableUtf8String = FFI.nullable("utf8string");
 
 const raylibCandidates = (): string[] => {
   const suffix = FFI.suffix;
@@ -307,6 +303,9 @@ function renderDefinitions(api, env, orderedStructs) {
   let js = "";
   let dts = `// Generated from official raylib ${api.source.version}. Do not edit.
 
+// Only the declarations marked export are part of the module.
+export {};
+
 export interface FFIPointer {
   readonly address: number;
   readonly isNull: boolean;
@@ -338,29 +337,58 @@ export type FFIPointerInput =
   | ArrayBuffer
   | SharedArrayBuffer
   | FFITypedArray
-  | FFIAggregateValue
+  | FFIAggregate
   | null;
-export interface FFIAggregateValue {
+declare const ffiAggregate: unique symbol;
+/** Any GocciaScript FFI aggregate value. */
+export interface FFIAggregate {
+  readonly [ffiAggregate]: true;
+}
+/** Backing store of an aggregate, as returned by GocciaScript's \`FFI.metadata(value)\`. */
+export interface FFIAggregateMetadata {
   readonly buffer: ArrayBuffer;
   readonly byteOffset: number;
   readonly size: number;
 }
+/**
+ * Aggregate that also exposes its backing store directly. A native field named
+ * like a metadata property takes precedence; \`FFI.metadata(value)\` always works.
+ */
+export interface FFIAggregateValue extends FFIAggregate, FFIAggregateMetadata {}
 export interface FFIArrayValue<T> extends FFIAggregateValue {
   readonly length: number;
   [index: number]: T;
 }
-export interface FFIStructDescriptor<T extends FFIAggregateValue> {
+export interface FFIStructDescriptor<T extends FFIAggregate> {
   readonly kind: "struct";
   readonly size: number;
   readonly alignment: number;
   create(initializer?: Partial<T>): T;
+}
+declare const ffiVarargs: unique symbol;
+/** Typed variadic tail created by GocciaScript's \`FFI.varargs(types, values)\`. */
+export interface FFIVarargs {
+  readonly [ffiVarargs]: true;
+}
+/**
+ * The members of GocciaScript's \`FFI\` global that callers of these bindings
+ * use. GocciaScript ships no declarations, so type-checked code declares the
+ * global itself: \`declare const FFI: GocciaFFI;\`.
+ */
+export interface GocciaFFI {
+  varargs(types: readonly unknown[], values: readonly unknown[]): FFIVarargs;
+  metadata(value: FFIAggregate): FFIAggregateMetadata;
 }
 export interface FFILibrary {
   readonly path: string;
   readonly closed: boolean;
   bind(
     name: string,
-    signature: { args: readonly unknown[]; returns: unknown },
+    signature: {
+      args: readonly unknown[];
+      returns: unknown;
+      variadic?: boolean;
+    },
   ): (...args: unknown[]) => unknown;
   symbol(name: string): FFIPointer;
   close(): void;
@@ -370,9 +398,6 @@ export declare const RAYLIB_BINDING_INFO: {
   raylibCommit: "${api.source.commit}";
   gocciaScriptVersion: string;
   linkage: "dynamic";
-};
-export declare const RAYLIB_FIELD_ALIASES: {
-  AudioStream: { buffer: "nativeBuffer" };
 };
 export declare const raylibLibrary: FFILibrary;
 export declare function closeRaylib(): void;
@@ -390,17 +415,26 @@ export declare function closeRaylib(): void;
     js += docComment(struct.description);
     js += `export const ${struct.name} = FFI.struct({\n`;
     for (const field of fields) {
-      js += `  ${JSON.stringify(ffiFieldName(field.name))}: ${field.resolved.descriptor},\n`;
+      js += `  ${JSON.stringify(field.name)}: ${field.resolved.descriptor},\n`;
     }
     js += "});\n\n";
 
+    const shadowed = aggregateMetadataNames.filter((name) =>
+      fields.some((field) => field.name === name),
+    );
+    const base =
+      shadowed.length === 0
+        ? "FFIAggregateValue"
+        : `FFIAggregate, Omit<FFIAggregateMetadata, ${shadowed
+            .map((name) => JSON.stringify(name))
+            .join(" | ")}>`;
     dts += docComment(struct.description);
-    dts += `export interface ${struct.name}Value extends FFIAggregateValue {\n`;
+    dts += `export interface ${struct.name}Value extends ${base} {\n`;
     for (const field of fields) {
-      if (ffiFieldName(field.name) !== field.name) {
-        dts += `  /** Native C field: ${field.name}. */\n`;
+      if (shadowed.includes(field.name)) {
+        dts += `  /** Native C field; read the backing store with \`FFI.metadata(value).${field.name}\`. */\n`;
       }
-      dts += `  ${JSON.stringify(ffiFieldName(field.name))}: ${field.resolved.ts};\n`;
+      dts += `  ${JSON.stringify(field.name)}: ${field.resolved.ts};\n`;
     }
     dts += "}\n";
     dts += `export declare const ${struct.name}: FFIStructDescriptor<${struct.name}Value>;\n\n`;
@@ -469,23 +503,27 @@ export declare function closeRaylib(): void;
 }
 
 function classifyFunction(fn, env, goccia) {
-  if (intentionalSkips.has(fn.name)) {
+  const variadic = fn.params.at(-1)?.type === "...";
+  const params = variadic ? fn.params.slice(0, -1) : fn.params;
+  if (params.length > goccia.ffi.maxArguments) {
     return {
       supported: false,
-      reason: intentionalSkips.get(fn.name),
-      category: "intentional-0.1-scope",
-    };
-  }
-  if (fn.params.length > goccia.ffi.maxArguments) {
-    return {
-      supported: false,
-      reason: "more-than-8-arguments",
-      category: "stable-runtime-limit",
+      reason: `more-than-${goccia.ffi.maxArguments}-arguments`,
+      category: "runtime-limit",
     };
   }
 
   try {
-    const args = fn.params.map((param) => resolveType(param.type, env, "argument"));
+    const nullableParameters = nullableStringParameters.get(fn.name) ?? [];
+    const args = params.map((param, index) =>
+      nullableParameters.includes(index)
+        ? {
+            kind: "utf8string",
+            descriptor: "nullableUtf8String",
+            ts: "string | null",
+          }
+        : resolveType(param.type, env, "argument"),
+    );
     let returns = resolveType(fn.returnType, env, "return");
     if (ownedTextReturns.has(fn.name)) {
       returns = {
@@ -494,18 +532,7 @@ function classifyFunction(fn, env, goccia) {
         ts: "FFIPointer",
       };
     }
-    const hasF32 = args.some((arg) => arg.kind === "f32");
-    const hasOther = args.some((arg) => arg.kind !== "f32");
-    if (!goccia.ffi.mixedTopLevelF32 && hasF32 && hasOther) {
-      return {
-        supported: false,
-        reason: "mixed-top-level-f32",
-        category: "stable-runtime-limit",
-        args,
-        returns,
-      };
-    }
-    return { supported: true, args, returns };
+    return { supported: true, params, args, returns, variadic };
   } catch (error) {
     return {
       supported: false,
@@ -516,7 +543,24 @@ function classifyFunction(fn, env, goccia) {
   }
 }
 
+// A stale entry would silently drop a nullable parameter, so drift in the
+// pinned API fails generation instead.
+function assertNullableStringParameters(api, env) {
+  const functions = new Map(api.functions.map((fn) => [fn.name, fn]));
+  for (const [name, indices] of nullableStringParameters) {
+    const fn = functions.get(name);
+    if (!fn) throw new Error(`Nullable string function is not in the API: ${name}`);
+    for (const index of indices) {
+      const type = fn.params[index]?.type;
+      if (!type || resolveType(type, env, "argument").kind !== "utf8string") {
+        throw new Error(`${name} parameter ${index} is not a C string`);
+      }
+    }
+  }
+}
+
 function renderFunctions(api, env, goccia, deferredDefines) {
+  assertNullableStringParameters(api, env);
   let js = "";
   let dts = "";
   const generated = [];
@@ -537,28 +581,18 @@ function renderFunctions(api, env, goccia, deferredDefines) {
 
     generated.push(fn.name);
     const args = classification.args.map((arg) => arg.descriptor).join(", ");
+    const variadic = classification.variadic ? "variadic: true, " : "";
     js += docComment(fn.description);
-    js += `export const ${fn.name} = raylibLibrary.bind("${fn.name}", { args: [${args}], returns: ${classification.returns.descriptor} });\n\n`;
+    js += `export const ${fn.name} = raylibLibrary.bind("${fn.name}", { args: [${args}], ${variadic}returns: ${classification.returns.descriptor} });\n\n`;
 
+    const parameters = classification.params.map(
+      (param, index) =>
+        `${param.name || `arg${index}`}: ${classification.args[index].ts}`,
+    );
+    // GocciaScript requires exactly one FFI.varargs(types, values) tail.
+    if (classification.variadic) parameters.push("args: FFIVarargs");
     dts += docComment(fn.description);
-    dts += `export declare function ${fn.name}(${fn.params
-      .map((param, index) => `${param.name || `arg${index}`}: ${classification.args[index].ts}`)
-      .join(", ")}): ${classification.returns.ts};\n\n`;
-
-    const nullableParameters = nullableStringParameters.get(fn.name);
-    if (nullableParameters) {
-      const rawArgs = classification.args.map((arg, index) =>
-        nullableParameters.includes(index)
-          ? { descriptor: '"pointer"', ts: "FFIPointerInput" }
-          : arg,
-      );
-      js += `/** Raw-pointer variant for nullable C string parameters. */\n`;
-      js += `export const ${fn.name}Raw = raylibLibrary.bind("${fn.name}", { args: [${rawArgs.map((arg) => arg.descriptor).join(", ")}], returns: ${classification.returns.descriptor} });\n\n`;
-      dts += `/** Raw-pointer variant for nullable C string parameters. */\n`;
-      dts += `export declare function ${fn.name}Raw(${fn.params
-        .map((param, index) => `${param.name || `arg${index}`}: ${rawArgs[index].ts}`)
-        .join(", ")}): ${classification.returns.ts};\n\n`;
-    }
+    dts += `export declare function ${fn.name}(${parameters.join(", ")}): ${classification.returns.ts};\n\n`;
   }
 
   for (const define of deferredDefines) {
@@ -570,16 +604,12 @@ function renderFunctions(api, env, goccia, deferredDefines) {
 }
 
 function renderSkipped(api, goccia, generated, skipped) {
-  const intentionalCount = skipped.filter(
-    (item) => item.category === "intentional-0.1-scope",
-  ).length;
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     raylibVersion: api.source.version,
     raylibCommit: api.source.commit,
     gocciaScriptVersion: goccia.version,
     apiFunctions: api.inventory.functions,
-    callableTargetAfterUpstreamSupport: api.inventory.functions - intentionalCount,
     generatedFunctions: generated.length,
     skippedFunctions: skipped.length,
     skipped,
@@ -600,11 +630,14 @@ GocciaScript ${goccia.version}.
 - Official API functions: ${report.apiFunctions}
 - Generated and callable on the pinned stable runtime: ${report.generatedFunctions}
 - Deterministically skipped: ${report.skippedFunctions}
-- Target after mixed-top-level-\`f32\` support: ${report.callableTargetAfterUpstreamSupport}
 
-The report is a compatibility boundary, not a claim that skipped functions are
-implemented. Re-run the generator after the upstream FFI restriction is removed.
-The three intentional 0.1 exclusions remain out of scope.
+${
+    skipped.length === 0
+      ? `The pinned runtime binds the complete official API. A function that a future
+raylib or runtime version cannot bind is listed here rather than shimmed.`
+      : `The report is a compatibility boundary, not a claim that skipped functions are
+implemented. Re-run the generator after the limit below is removed.`
+  }
 `;
 
   for (const [key, items] of groups) {
@@ -651,7 +684,6 @@ export async function renderBindingArtifacts() {
     stats: {
       generated: functions.generated.length,
       skipped: functions.skipped.length,
-      target: skipped.report.callableTargetAfterUpstreamSupport,
     },
     api,
     env,

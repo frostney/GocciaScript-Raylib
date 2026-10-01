@@ -44,18 +44,18 @@ RUN case "$TARGETARCH" in \
     esac \
   && mkdir -p /opt/gocciascript \
   && curl --fail --location \
-    "https://github.com/frostney/GocciaScript/releases/download/0.10.0/gocciascript-0.10.0-linux-${goccia_arch}.tar.gz" \
+    "https://github.com/frostney/GocciaScript/releases/download/0.14.0/gocciascript-0.14.0-linux-${goccia_arch}.tar.gz" \
     --output /tmp/gocciascript.tar.gz \
   && tar -xzf /tmp/gocciascript.tar.gz -C /opt/gocciascript --strip-components=1 \
   && chmod +x \
-    /opt/gocciascript/GocciaScriptLoader \
+    /opt/gocciascript/GocciaRunner \
     /opt/gocciascript/GocciaTestRunner \
-  && ln -s /opt/gocciascript/GocciaScriptLoader /usr/local/bin/GocciaScriptLoader \
+  && ln -s /opt/gocciascript/GocciaRunner /usr/local/bin/GocciaRunner \
   && ln -s /opt/gocciascript/GocciaTestRunner /usr/local/bin/GocciaTestRunner
 
 WORKDIR /workspace
 COPY . .
-ENV GOCCIA_LOADER=/usr/local/bin/GocciaScriptLoader
+ENV GOCCIA_RUNNER=/usr/local/bin/GocciaRunner
 ENV GOCCIA_TEST_RUNNER=/usr/local/bin/GocciaTestRunner
 ENV RAYLIB_INCLUDE_DIR=/usr/local/include
 
@@ -68,11 +68,12 @@ RUN npm ci \
   && npm run test:ffi \
   && npm run pack:check \
   && mkdir -p .cache \
-  && xvfb-run -a GocciaScriptLoader tests/fixtures/basic-window-smoke.ts \
-  && xvfb-run -a GocciaScriptLoader tests/fixtures/basic-input-smoke.ts \
-  && xvfb-run -a GocciaScriptLoader tests/fixtures/image-loading-smoke.ts \
-  && xvfb-run -a GocciaScriptLoader examples/smoke.ts \
+  && xvfb-run -a GocciaRunner -P tests/fixtures/basic-window-smoke.ts \
+  && xvfb-run -a GocciaRunner -P tests/fixtures/basic-input-smoke.ts \
+  && xvfb-run -a GocciaRunner -P tests/fixtures/image-loading-smoke.ts \
+  && xvfb-run -a GocciaRunner -P examples/smoke.ts \
   && xvfb-run -a npm run test:bunnymark:visual \
-  && xvfb-run -a GocciaScriptLoader tests/fixtures/doom-smoke.ts \
+  && xvfb-run -a GocciaRunner -P tests/fixtures/doom-smoke.ts \
   && test -s .cache/doom-smoke.png \
-  && xvfb-run -a make -C examples/doom-gpl smoke
+  && make -C examples/doom-gpl test-palette \
+  && xvfb-run -a make -C examples/doom-gpl smoke GOCCIA_FLAGS=-P

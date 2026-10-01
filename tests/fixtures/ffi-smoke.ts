@@ -1,13 +1,16 @@
 import bunnyBytes from "../../examples/assets/raybunny.png" with { type: "bytes" };
 import {
+  AudioStream,
+  CheckCollisionCircles,
   Color,
+  ColorAlpha,
   ColorToInt,
   EncodeDataBase64,
   GetColor,
   GetFileExtension,
   GetRandomValue,
   IsPathFile,
-  LoadAutomationEventListRaw,
+  LoadAutomationEventList,
   LoadFileText,
   LoadImageFromMemory,
   MemAlloc,
@@ -15,10 +18,13 @@ import {
   RAYLIB_BINDING_INFO,
   SetRandomSeed,
   TextCopy,
+  TextFormat,
   TextLength,
+  TextReplace,
   UnloadAutomationEventList,
   UnloadFileText,
   UnloadImage,
+  Vector2,
   closeRaylib,
 } from "../../bindings/raylib.ts";
 
@@ -58,9 +64,38 @@ const encoded = EncodeDataBase64(
 assert(encoded.isNull === false && outputSize[0] > 0, "owned encoded text pointer");
 MemFree(encoded);
 
-const emptyEvents = LoadAutomationEventListRaw(null);
-assert(emptyEvents.count === 0, "nullable C string raw binding");
+const emptyEvents = LoadAutomationEventList(null);
+// The integration test checks raylib's log to prove that NULL, not the text
+// "null", reached the native call.
+assert(emptyEvents.count === 0, "empty automation event list");
 UnloadAutomationEventList(emptyEvents);
+assert(TextReplace("a-b-c", "-", null) === "abc", "null replacement text");
+assert(TextReplace("a-b-c", "-", "+") === "a+b+c", "nullable C string text");
+
+const faded = ColorAlpha(Color.create({ r: 18, g: 52, b: 86, a: 255 }), 0.5);
+assert(
+  faded.r === 18 && faded.g === 52 && faded.b === 86 && faded.a === 127,
+  "aggregate argument mixed with a float argument",
+);
+const origin = Vector2.create({ x: 0, y: 0 });
+const apart = Vector2.create({ x: 10, y: 0 });
+assert(CheckCollisionCircles(origin, 6.5, apart, 4.5) === true, "overlapping circles");
+assert(CheckCollisionCircles(origin, 4.5, apart, 4.5) === false, "separate circles");
+
+const formatted = TextFormat(
+  "%s %03d %.2f",
+  FFI.varargs(["utf8string", "i32", "f32"], ["raylib", 7, 1.5]),
+);
+assert(formatted === "raylib 007 1.50", "variadic native call");
+
+const stream = AudioStream.create({ sampleRate: 44100, channels: 2 });
+assert(stream.buffer.isNull === true, "exact native field named buffer");
+const streamStorage = FFI.metadata(stream);
+assert(
+  streamStorage.buffer instanceof ArrayBuffer &&
+    streamStorage.size === AudioStream.size,
+  "aggregate backing store through FFI.metadata",
+);
 
 const image = LoadImageFromMemory(".png", bunnyBytes, bunnyBytes.length);
 assert(image.width === 32 && image.height === 32, "byte-pointer image load");

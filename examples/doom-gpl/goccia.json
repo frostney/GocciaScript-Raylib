@@ -1,7 +1,10 @@
 {
   "source-type": "module",
   "mode": "bytecode",
-  "unsafe-ffi": true,
+  "permissions": {
+    "allow-ffi": true,
+    "allow-read": ["../../bindings/raylib.ts"]
+  },
   "compat-asi": true,
   "compat-function": true,
   "compat-traditional-for-loop": true,

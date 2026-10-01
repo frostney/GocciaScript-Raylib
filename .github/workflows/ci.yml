@@ -76,16 +76,16 @@ jobs:
         run: |
           case "$RUNNER_OS-$RUNNER_ARCH" in
             macOS-ARM64)
-              asset="gocciascript-0.10.0-macos-arm64.zip"
+              asset="gocciascript-0.14.0-macos-arm64.zip"
               ;;
             macOS-X64)
-              asset="gocciascript-0.10.0-macos-x64.zip"
+              asset="gocciascript-0.14.0-macos-x64.zip"
               ;;
             Linux-ARM64)
-              asset="gocciascript-0.10.0-linux-arm64.tar.gz"
+              asset="gocciascript-0.14.0-linux-arm64.tar.gz"
               ;;
             Linux-X64)
-              asset="gocciascript-0.10.0-linux-x64.tar.gz"
+              asset="gocciascript-0.14.0-linux-x64.tar.gz"
               ;;
             *)
               echo "Unsupported runner: $RUNNER_OS-$RUNNER_ARCH" >&2
@@ -93,7 +93,7 @@ jobs:
               ;;
           esac
           curl --fail --location \
-            "https://github.com/frostney/GocciaScript/releases/download/0.10.0/$asset" \
+            "https://github.com/frostney/GocciaScript/releases/download/0.14.0/$asset" \
             --output "$RUNNER_TEMP/$asset"
           mkdir -p "$RUNNER_TEMP/gocciascript"
           if [[ "$asset" == *.zip ]]; then
@@ -101,10 +101,10 @@ jobs:
           else
             tar -xzf "$RUNNER_TEMP/$asset" -C "$RUNNER_TEMP/gocciascript"
           fi
-          loader="$(find "$RUNNER_TEMP/gocciascript" -type f -name GocciaScriptLoader -print -quit)"
+          runner="$(find "$RUNNER_TEMP/gocciascript" -type f -name GocciaRunner -print -quit)"
           test_runner="$(find "$RUNNER_TEMP/gocciascript" -type f -name GocciaTestRunner -print -quit)"
-          chmod +x "$loader" "$test_runner"
-          echo "GOCCIA_LOADER=$loader" >> "$GITHUB_ENV"
+          chmod +x "$runner" "$test_runner"
+          echo "GOCCIA_RUNNER=$runner" >> "$GITHUB_ENV"
           echo "GOCCIA_TEST_RUNNER=$test_runner" >> "$GITHUB_ENV"
 
       - run: npm ci
@@ -122,15 +122,18 @@ jobs:
         shell: bash
         run: |
           mkdir -p .cache
-          xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/basic-window-smoke.ts
-          xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/basic-input-smoke.ts
-          xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/image-loading-smoke.ts
-          xvfb-run -a "$GOCCIA_LOADER" examples/smoke.ts
+          # -P accepts the ffi request in goccia.json for this run only.
+          xvfb-run -a "$GOCCIA_RUNNER" -P tests/fixtures/basic-window-smoke.ts
+          xvfb-run -a "$GOCCIA_RUNNER" -P tests/fixtures/basic-input-smoke.ts
+          xvfb-run -a "$GOCCIA_RUNNER" -P tests/fixtures/image-loading-smoke.ts
+          xvfb-run -a "$GOCCIA_RUNNER" -P examples/smoke.ts
           xvfb-run -a npm run test:bunnymark:visual
-          xvfb-run -a "$GOCCIA_LOADER" tests/fixtures/doom-smoke.ts
+          xvfb-run -a "$GOCCIA_RUNNER" -P tests/fixtures/doom-smoke.ts
           test -s .cache/doom-smoke.png
 
       - name: Goccia-executed DOOM GPL smoke
         if: runner.os == 'Linux'
         shell: bash
-        run: xvfb-run -a make -C examples/doom-gpl smoke
+        run: |
+          make -C examples/doom-gpl test-palette
+          xvfb-run -a make -C examples/doom-gpl smoke GOCCIA_FLAGS=-P

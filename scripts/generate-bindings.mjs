@@ -13,5 +13,5 @@ await Promise.all([
 
 console.log(
   `Generated ${artifacts.stats.generated} raylib functions; ` +
-    `skipped ${artifacts.stats.skipped}; post-upstream target ${artifacts.stats.target}.`,
+    `skipped ${artifacts.stats.skipped}.`,
 );
