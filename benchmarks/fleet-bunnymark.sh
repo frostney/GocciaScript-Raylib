@@ -54,19 +54,28 @@ goccia_binary() {
   local version=$1 name=$2
   local directory="$WORK_DIR/gocciascript-$version"
   local asset="gocciascript-$version-$platform.$archive"
+  # The callers run this in a command substitution, where bash does not exit
+  # on a failed command, so each step reports its own failure. The release is
+  # extracted beside its final path so an interrupted download is retried.
   if [ ! -d "$directory" ]; then
-    mkdir -p "$directory"
+    rm -rf "$directory.partial"
+    mkdir -p "$directory.partial"
     curl --fail --location --silent --show-error \
       "https://github.com/frostney/GocciaScript/releases/download/$version/$asset" \
-      --output "$WORK_DIR/$asset"
+      --output "$WORK_DIR/$asset" || return 1
     if [ "$archive" = zip ]; then
-      unzip -q "$WORK_DIR/$asset" -d "$directory"
+      unzip -q "$WORK_DIR/$asset" -d "$directory.partial" || return 1
     else
-      tar -xzf "$WORK_DIR/$asset" -C "$directory"
+      tar -xzf "$WORK_DIR/$asset" -C "$directory.partial" || return 1
     fi
+    mv "$directory.partial" "$directory"
   fi
   local binary
   binary=$(find "$directory" -type f -name "$name" -print -quit)
+  if [ -z "$binary" ]; then
+    echo "$name is not in $asset" >&2
+    return 1
+  fi
   chmod +x "$binary"
   printf '%s\n' "$binary"
 }

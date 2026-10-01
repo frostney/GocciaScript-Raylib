@@ -4,15 +4,16 @@ Last updated: 2026-10-01
 
 ## Current task
 
-Collect Bunnymark numbers for GocciaScript 0.10.0 versus 0.14.0 across
-Johannes's machines, then update `benchmarks/import-binding-aliases.md`.
+Land the fleet benchmark pull request (#12). The Bunnymark numbers for
+GocciaScript 0.10.0 versus 0.14.0 are collected for every machine and recorded
+in `benchmarks/import-binding-aliases.md`; nothing is left to measure.
 
 State: the 0.14.0 update is merged (PR #11, merge commit `3eeab1f`) and tagged
 `0.1.0`. PR #12 (branch `bench/fleet-bunnymark`) adds
 `benchmarks/fleet-bunnymark.sh`, which runs the comparison on one machine and
 prints a Markdown table, and records the fleet results.
 
-Fleet results so far, 10,000 sprites, 100 frames, three interleaved runs:
+Fleet results, 10,000 sprites, 100 frames, three interleaved runs:
 
 | Machine | Renderer | Instanced 0.10.0 -> 0.14.0 | Direct 0.10.0 -> 0.14.0 |
 |---|---|---|---|
