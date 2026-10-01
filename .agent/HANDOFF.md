@@ -8,9 +8,9 @@ Collect Bunnymark numbers for GocciaScript 0.10.0 versus 0.14.0 across
 Johannes's machines, then update `benchmarks/import-binding-aliases.md`.
 
 State: the 0.14.0 update is merged (PR #11, merge commit `3eeab1f`) and tagged
-`0.1.0`. On the branch `bench/fleet-bunnymark` there is an uncommitted
+`0.1.0`. PR #12 (branch `bench/fleet-bunnymark`) adds
 `benchmarks/fleet-bunnymark.sh`, which runs the comparison on one machine and
-prints a Markdown table.
+prints a Markdown table, and records the fleet results.
 
 Fleet results so far, 10,000 sprites, 100 frames, three interleaved runs:
 
@@ -19,9 +19,13 @@ Fleet results so far, 10,000 sprites, 100 frames, three interleaved runs:
 | boiler (Ryzen 9 6900HX, Linux) | Radeon RX 6600M | 31.3 -> 37.4 FPS | 10.2 -> 10.0 FPS |
 | boiler | Radeon 680M | 31.4 -> 37.8 FPS | 10.2 -> 10.6 FPS |
 | boiler | llvmpipe under Xvfb | 20.7 -> 23.0 FPS | 8.8 -> 9.1 FPS |
+| firepit (Apple M5 Max, macOS 27.0.1) | Apple M5 Max | 51.5 -> 62.0 FPS | 17.8 -> 18.2 FPS |
+| burnside (Apple M1 Max, macOS 26.5.2) | Apple M1 Max | 26.9 -> 30.9 FPS | 10.2 -> 10.5 FPS |
 
-Not measured: `burnside` and `firepit` (both macOS). Neither accepts SSH from
-boiler; `firepit` was offline.
+The whole fleet is measured and recorded in
+`benchmarks/import-binding-aliases.md`. The Macs do not accept SSH; they were
+driven through lantaarn (`lantaarn-ctl` from boiler over Tailscale), which was
+capturing the screen at 30 FPS during the runs.
 
 ## What changed
 
@@ -91,7 +95,5 @@ frame in its 10,000 native calls.
 
 ## Next steps
 
-1. Run `benchmarks/fleet-bunnymark.sh` on `burnside` and `firepit`, either by
-   enabling Remote Login there or by running it by hand from a clone.
-2. Update `benchmarks/import-binding-aliases.md` with the fleet table.
-3. Optimise the Bunnymark update loop, which bounds the instanced path.
+1. Merge the fleet benchmark pull request (#12).
+2. Optimise the Bunnymark update loop, which bounds the instanced path.

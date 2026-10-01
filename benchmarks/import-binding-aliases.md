@@ -9,8 +9,8 @@ into local constants.
 - AMD Ryzen 9 6900HX, Linux Mint 22.3 (x86-64)
 - GocciaScript 0.10.0 and 0.14.0 release binaries, bytecode mode
 - dynamically loaded raylib 6.0 at the pinned commit
-- Xvfb with Mesa llvmpipe 25.2.8 (software OpenGL 4.5), so absolute frame rates
-  are not comparable with the Apple M1 Max results in the other reports
+- Xvfb with Mesa llvmpipe 25.2.8 (software OpenGL 4.5) for the two sections
+  below; [Across machines](#across-machines) lists its own renderers
 
 ## Imported binding versus local alias
 
@@ -45,14 +45,54 @@ The means differ by 0.9% on the per-sprite `DrawTextureV` path and by 0.6% in
 the other direction on the instanced path. Both differences are smaller than
 the spread between runs of one variant.
 
-For the whole update, the previous revision on 0.10.0 (aliases, heightmap
-quad) was compared with this revision on 0.14.0 (direct imports, plane quad)
-under the same workload, three interleaved runs each:
+## Across machines
 
-| Draw path | Previous revision, 0.10.0 | This revision, 0.14.0 |
-|---|---|---|
-| `DrawTextureV` | 2946, 2916, 2940 ms (mean 2934.0) | 2875, 2877, 2877 ms (mean 2876.3) |
-| `DrawMeshInstanced` | 1260, 1290, 1268 ms (mean 1272.7) | 1182, 1181, 1176 ms (mean 1179.7) |
+`benchmarks/fleet-bunnymark.sh` compared the last 0.10.0 revision (`70a0453`:
+aliases, heightmap quad) on GocciaScript 0.10.0 with tag `0.1.0` (direct
+imports, plane quad) on GocciaScript 0.14.0. Each row is 10,000 fixed-seed
+sprites, uncapped, 100 frames per run after startup, three interleaved runs
+per variant, reported as total frames over total frame time. The comparison
+covers the engine and the example together.
+
+| Machine | Renderer | Draw path | 0.10.0 | 0.14.0 | Change |
+|---|---|---|---:|---:|---:|
+| Apple M5 Max, macOS 27.0.1 | Apple M5 Max | `DrawMeshInstanced` | 51.5 FPS | 62.0 FPS | +20.3% |
+| Apple M5 Max, macOS 27.0.1 | Apple M5 Max | `DrawTextureV` | 17.8 FPS | 18.2 FPS | +2.2% |
+| Apple M1 Max, macOS 26.5.2 | Apple M1 Max | `DrawMeshInstanced` | 26.9 FPS | 30.9 FPS | +14.7% |
+| Apple M1 Max, macOS 26.5.2 | Apple M1 Max | `DrawTextureV` | 10.2 FPS | 10.5 FPS | +2.6% |
+| Ryzen 9 6900HX, Linux Mint 22.3 | Radeon RX 6600M | `DrawMeshInstanced` | 31.3 FPS | 37.4 FPS | +19.7% |
+| Ryzen 9 6900HX, Linux Mint 22.3 | Radeon RX 6600M | `DrawTextureV` | 10.2 FPS | 10.0 FPS | -2.3% |
+| Ryzen 9 6900HX, Linux Mint 22.3 | Radeon 680M | `DrawMeshInstanced` | 31.4 FPS | 37.8 FPS | +20.4% |
+| Ryzen 9 6900HX, Linux Mint 22.3 | Radeon 680M | `DrawTextureV` | 10.2 FPS | 10.6 FPS | +4.6% |
+| Ryzen 9 6900HX, Linux Mint 22.3 | llvmpipe under Xvfb | `DrawMeshInstanced` | 20.7 FPS | 23.0 FPS | +11.0% |
+| Ryzen 9 6900HX, Linux Mint 22.3 | llvmpipe under Xvfb | `DrawTextureV` | 8.8 FPS | 9.1 FPS | +3.1% |
+
+Per-run 100-frame times in milliseconds, in run order:
+
+| Machine and renderer | Draw path | 0.10.0 | 0.14.0 |
+|---|---|---|---|
+| Apple M5 Max | `DrawMeshInstanced` | 1948, 1934, 1945 | 1629, 1595, 1618 |
+| Apple M5 Max | `DrawTextureV` | 5504, 5603, 5769 | 5563, 5469, 5480 |
+| Apple M1 Max | `DrawMeshInstanced` | 3913, 3644, 3583 | 3229, 3246, 3236 |
+| Apple M1 Max | `DrawTextureV` | 9857, 9747, 9717 | 9566, 9510, 9508 |
+| Radeon RX 6600M | `DrawMeshInstanced` | 3197, 3187, 3212 | 2658, 2676, 2682 |
+| Radeon RX 6600M | `DrawTextureV` | 9760, 9840, 9804 | 10062, 10018, 10011 |
+| Radeon 680M | `DrawMeshInstanced` | 3186, 3185, 3190 | 2645, 2651, 2644 |
+| Radeon 680M | `DrawTextureV` | 9852, 9825, 9796 | 9394, 9383, 9403 |
+| llvmpipe under Xvfb | `DrawMeshInstanced` | 4797, 4851, 4857 | 4322, 4363, 4382 |
+| llvmpipe under Xvfb | `DrawTextureV` | 11285, 11326, 11320 | 10941, 11027, 10928 |
+
+The instanced path gains 15 to 20% on every hardware renderer, and the
+per-sprite `DrawTextureV` path stays within 5% either way. On the Ryzen
+machine the two GPUs give the same instanced frame rate: at 10,000 sprites the
+frame is bound by the JavaScript update loop, which measured about 27.6 ms of
+a 28.2 ms frame on the Radeon RX 6600M, with drawing and presenting under
+1 ms.
+
+Both Macs were driven through a remote-desktop session that captured the
+screen at 30 FPS during the runs, so their absolute numbers may be slightly
+low. The first 0.10.0 instanced run on the M1 Max is about 8% slower than the
+other two.
 
 ## Decision
 
